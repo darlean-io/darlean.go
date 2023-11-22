@@ -1,0 +1,1 @@
+go build -v -o embedlib.dll -buildmode=c-shared api.go embedlib.go
