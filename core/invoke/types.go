@@ -1,16 +1,18 @@
 package invoke
 
-import "core/anny"
+import (
+	"core/variant"
+)
 
 type InvokeRequest struct {
 	ActorType  string
 	ActorId    []string
 	ActionName string
-	Parameters []anny.Anny
+	Parameters []variant.Variant
 	Lazy       bool
 }
 
 type InvokeResponse struct {
-	Error anny.Anny
-	Value anny.Anny
+	Error variant.Variant
+	Value variant.Variant
 }

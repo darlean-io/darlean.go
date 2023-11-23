@@ -6,8 +6,8 @@ package main
 // void makeCallback(_GoString_ bufhandle, invoke_cb cb);
 import "C"
 import (
-	"core/anny"
 	"core/invoke"
+	"core/variant"
 	"strings"
 )
 
@@ -36,7 +36,7 @@ func Invoke(cb C.invoke_cb, actorType string, actorId []string, actionName strin
 		ActorType:  actorType,
 		ActorId:    actorId, //strings.Split(actorId, ","),
 		ActionName: actionName,
-		Parameters: []anny.Anny{anny.New(arguments)},
+		Parameters: []variant.Variant{variant.New(arguments)},
 	}
-	DoInvoke(*apiInstance, &request, goCb)
+	apiInstance.Invoke(&request, goCb)
 }

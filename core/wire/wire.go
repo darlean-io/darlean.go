@@ -2,8 +2,8 @@ package wire
 
 import (
 	"bytes"
-	"core/anny"
 	"core/fastproto"
+	"core/variant"
 	"fmt"
 )
 
@@ -23,12 +23,12 @@ type ActorCallRequest struct {
 	ActorType  string
 	ActorId    []string
 	ActionName string
-	Arguments  []anny.Anny
+	Arguments  []variant.Variant
 }
 
 type ActorCallResponse struct {
-	Error anny.Anny
-	Value anny.Anny
+	Error variant.Variant
+	Value variant.Variant
 }
 
 type Tags struct {
@@ -205,7 +205,7 @@ func Deserialize(buf *bytes.Buffer, tags *Tags) error {
 
 	nrArguments, err := fastproto.ReadUnsignedInt(buf)
 	if nrArguments > 0 {
-		args := make([]anny.Anny, nrArguments)
+		args := make([]variant.Variant, nrArguments)
 		for i := 0; i < int(nrArguments); i++ {
 			arg, err := fastproto.ReadVariant(buf)
 			if err != nil {

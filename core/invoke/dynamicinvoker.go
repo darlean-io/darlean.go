@@ -1,9 +1,9 @@
 package invoke
 
 import (
-	"core/anny"
 	"core/backoff"
 	"core/services/actorregistry"
+	"core/variant"
 	"math/rand"
 )
 
@@ -93,6 +93,7 @@ func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) *InvokeResponse {
 			}
 			// TODO: Fill suggestions based on redirect info in error and set doBackoff to false
 			// Also do this when lazy = true and other side indicates a refusal
+			// Do something with MigrationVersion?
 		}
 
 		if !doBackoff {
@@ -109,7 +110,7 @@ func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) *InvokeResponse {
 	}
 
 	return &InvokeResponse{
-		Error: anny.New("invoke: All attempts failed"),
+		Error: variant.New("invoke: All attempts failed"),
 	}
 }
 

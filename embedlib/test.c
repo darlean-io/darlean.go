@@ -41,7 +41,8 @@ int main(void) {
     GoString goArgumentList[1] = {goArgument};
     GoSlice goArguments = {data: goArgumentList, 1, 1};
 
-    Invoke(onInvoked, goActorType, goActorId, goActionName, goArguments);
+    printf("Invoking: %s\n", argument);
+    Invoke(onInvoked, goActorType, goActorId, goActionName, goArgument);
     
     Sleep(5*1000);
     

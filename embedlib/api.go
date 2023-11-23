@@ -16,7 +16,6 @@ import (
 	"core/invoke"
 	"core/natstransport"
 	"core/remoteactorregistry"
-	"fmt"
 	"time"
 )
 
@@ -52,8 +51,7 @@ func (api Api) Stop() {
 
 type invokeCb func(n string)
 
-func DoInvoke(api Api, request *invoke.InvokeRequest, goCb invokeCb) {
-	fmt.Printf("Request %+v", request)
+func (api Api) Invoke(request *invoke.InvokeRequest, goCb invokeCb) {
 	response := api.Invoker.Invoke(request)
 
 	if response.Value != nil {

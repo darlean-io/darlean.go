@@ -1,9 +1,9 @@
 package remoteactorregistry
 
 import (
-	"core/anny"
 	"core/invoke"
 	"core/services/actorregistry"
+	"core/variant"
 	"sync"
 	"time"
 )
@@ -43,7 +43,7 @@ func Obtain(invoker *invoke.StaticInvoker, hosts []string) (*ObtainResponse, err
 				ActorType:  SERVICE,
 				ActorId:    []string{},
 				ActionName: ACTION_OBTAIN,
-				Parameters: []anny.Anny{anny.New(ObtainRequest{})},
+				Parameters: []variant.Variant{variant.New(ObtainRequest{})},
 			},
 		}
 		resp := invoker.Invoke(&req)
