@@ -1,11 +1,11 @@
 package main
 
 import (
-	"core/anny"
 	"core/backoff"
 	"core/invoke"
 	"core/natstransport"
 	"core/remoteactorregistry"
+	"core/variant"
 	"fmt"
 	"time"
 )
@@ -15,7 +15,7 @@ func toLowerCase(invoker *invoke.DynamicInvoker, input string) {
 		ActorType:  "echoactor",
 		ActorId:    []string{"A"},
 		ActionName: "echo",
-		Parameters: []anny.Anny{anny.New(input)},
+		Parameters: []variant.Variant{variant.New(input)},
 	}
 
 	response := invoker.Invoke(&req)
