@@ -20,7 +20,7 @@ func toLowerCase(invoker *invoke.DynamicInvoker, input string) {
 
 	value, err := invoker.Invoke(&req)
 	if err != nil {
-		fmt.Printf("Error for %v: %v", input, value)
+		fmt.Printf("Error for %v: %v\n", input, err)
 		panic(err)
 	}
 	var v string

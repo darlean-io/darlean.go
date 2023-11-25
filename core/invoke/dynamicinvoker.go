@@ -5,6 +5,7 @@ import (
 	"core/services/actorregistry"
 	"core/variant"
 	"math/rand"
+	"time"
 )
 
 type DynamicInvoker struct {
@@ -129,6 +130,16 @@ func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) (any, *ActionError
 				invoker.cache.Update(request.ActorType, request.ActorId, *receiver)
 			}
 			return response.Value, nil
+		} else {
+			causes = append(causes, NewFrameworkError(ActionErrorOptions{
+				Code:     FRAMEWORK_ERROR_NO_RECEIVERS_AVAILABLE,
+				Template: "No receivers available at [RequestTime] to process an action on an instance of [ActorType]",
+				Parameters: map[string]any{
+					"RequestTime": time.Now().UTC(),
+					"ActorType":   request.ActorType,
+					"ActionName":  request.ActionName,
+				},
+			}))
 		}
 
 		if !doBackoff {

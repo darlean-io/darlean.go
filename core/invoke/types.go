@@ -8,6 +8,7 @@ import (
 
 const FRAMEWORK_ERROR_PARAMETER_REDIRECT_DESTINATION = "REDIRECT_DESTINATION"
 const FRAMEWORK_ERROR_INVOKE_ERROR = "INVOKE_ERROR"
+const FRAMEWORK_ERROR_NO_RECEIVERS_AVAILABLE = "NO_RECEIVERS_AVAILABLE"
 
 type InvokeRequest struct {
 	ActorType  string
@@ -79,6 +80,13 @@ func newActionError(options ActionErrorOptions, kind ErrorKind) *ActionError {
 	}
 	if len(e.Parameters) > 0 {
 		e.Message = FormatTemplate(options.Template, e.Parameters)
+	}
+	if e.Code != "" {
+		if e.Message == "" {
+			e.Message = e.Code
+		} else {
+			e.Message = "(" + e.Code + ") " + e.Message
+		}
 	}
 	return &e
 }
