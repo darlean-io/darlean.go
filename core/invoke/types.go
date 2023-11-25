@@ -1,7 +1,6 @@
 package invoke
 
 import (
-	"core/variant"
 	"fmt"
 	"strings"
 )
@@ -13,13 +12,13 @@ type InvokeRequest struct {
 	ActorType  string
 	ActorId    []string
 	ActionName string
-	Parameters []variant.Variant
+	Parameters []any
 	Lazy       bool
 }
 
 type InvokeResponse struct {
-	Error variant.Variant
-	Value variant.Variant
+	Error any
+	Value any
 }
 
 type ErrorKind string
@@ -28,13 +27,13 @@ const ERROR_KIND_FRAMEWORK = "framework"
 const ERROR_KIND_APPLICATION = "application"
 
 type ActionError struct {
-	Code       string                     `json:"code"`
-	Message    string                     `json:"message"`
-	Template   string                     `json:"template"`
-	Kind       ErrorKind                  `json:"kind"`
-	Parameters map[string]variant.Variant `json:"parameters"`
-	Nested     []*ActionError             `json:"nested"`
-	Stack      string                     `json:"stack"`
+	Code       string         `json:"code"`
+	Message    string         `json:"message"`
+	Template   string         `json:"template"`
+	Kind       ErrorKind      `json:"kind"`
+	Parameters map[string]any `json:"parameters"`
+	Nested     []*ActionError `json:"nested"`
+	Stack      string         `json:"stack"`
 }
 
 type ActionErrorOptions struct {
@@ -49,14 +48,10 @@ func (error ActionError) Error() string {
 	return error.Message
 }
 
-func FormatTemplate(template string, parameters map[string]variant.Variant) string {
+func FormatTemplate(template string, parameters map[string]any) string {
 	message := template
 	for key, value := range parameters {
-		v, ok := value.GetDirect()
-		if !ok {
-			value.Get(v)
-		}
-		message = strings.ReplaceAll(message, "["+key+"]", "\""+fmt.Sprint(v)+"\"")
+		message = strings.ReplaceAll(message, "["+key+"]", "\""+fmt.Sprint(value)+"\"")
 	}
 	return message
 }
@@ -67,7 +62,7 @@ func newActionError(options ActionErrorOptions, kind ErrorKind) *ActionError {
 		Code:       options.Code,
 		Message:    options.Template,
 		Template:   options.Template,
-		Parameters: variant.Map(options.Parameters),
+		Parameters: options.Parameters,
 		Nested:     options.Nested,
 		Stack:      options.Stack,
 	}

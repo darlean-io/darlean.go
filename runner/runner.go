@@ -15,7 +15,7 @@ func toLowerCase(invoker *invoke.DynamicInvoker, input string) {
 		ActorType:  "echoactor",
 		ActorId:    []string{"A"},
 		ActionName: "echo",
-		Parameters: variant.Array(input),
+		Parameters: []any{input},
 	}
 
 	value, err := invoker.Invoke(&req)
@@ -24,7 +24,7 @@ func toLowerCase(invoker *invoke.DynamicInvoker, input string) {
 		panic(err)
 	}
 	var v string
-	err2 := value.Get(&v)
+	err2 := variant.Assign(value, &v)
 	if err2 != nil {
 		panic(err)
 	}

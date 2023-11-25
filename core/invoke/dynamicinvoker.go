@@ -23,7 +23,7 @@ func NewDynamicInvoker(staticInvoker *StaticInvoker, backoff backoff.BackOff, re
 	}
 }
 
-func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) (variant.Variant, *ActionError) {
+func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) (any, *ActionError) {
 	var bo backoff.BackOffSession
 	useCache := true
 	cacheInvalidated := false
@@ -99,12 +99,8 @@ func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) (variant.Variant, 
 
 			if response.Error != nil {
 				var error ActionError
-				err := response.Error.Get(&error)
+				err := variant.Assign(response.Error, &error)
 				if err != nil {
-					panic(err)
-					// IN plaats van variant, any gebruiken met een Assign
-					// func die een "ruwe any" omzet naar een struct
-					// go get github.com/mitchellh/mapstructure
 					causes = append(causes, NewFrameworkError(ActionErrorOptions{
 						Code:     "ERROR_PARSE_ERROR",
 						Template: "Action returned an error, but unable to parse the error",
@@ -119,7 +115,7 @@ func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) (variant.Variant, 
 				redirect, present := error.Parameters[FRAMEWORK_ERROR_PARAMETER_REDIRECT_DESTINATION]
 				if present {
 					var redirects []string
-					err := redirect.Get(&redirects)
+					err := variant.Assign(redirect, &redirects)
 					if err != nil {
 						suggestions = redirects
 					}

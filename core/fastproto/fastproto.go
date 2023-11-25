@@ -3,31 +3,8 @@ package fastproto
 import (
 	"bytes"
 	"core/jsonbinary"
-	"core/variant"
 	"strconv"
 )
-
-type JsonVariant struct {
-	value []byte
-}
-
-func (variant *JsonVariant) Get(value any) error {
-	return jsonbinary.Deserialize(variant.value, value)
-}
-
-func (variant *JsonVariant) GetDirect() (any, bool) {
-	return nil, false
-}
-
-func newJsonVariant(value []byte) variant.Variant {
-	if value == nil || len(value) == 0 {
-		return nil
-	}
-	variant := JsonVariant{
-		value: value,
-	}
-	return &variant
-}
 
 const CHAR_CODE_ZERO_DIGITS = 'a'
 const CHAR_CODE_BUFFER = 'b'
@@ -130,23 +107,21 @@ func WriteJson(buf *bytes.Buffer, value any) error {
 	return nil
 }
 
-func ReadJson(buf *bytes.Buffer) (variant.Variant, error) {
+func ReadJson(buf *bytes.Buffer) (any, error) {
 	data, err := ReadBinary(buf)
 	if err != nil {
 		return nil, err
 	}
-	return newJsonVariant(*data), nil
+	var result any
+	if len(*data) == 0 {
+		return nil, nil
+	}
+	err = jsonbinary.Deserialize(*data, &result)
+	return result, err
 }
 
-func WriteVariant(buf *bytes.Buffer, value variant.Variant) error {
-	var extracted any
-	if value != nil {
-		err := value.Get(&extracted)
-		if err != nil {
-			return err
-		}
-	}
-	switch v := (extracted).(type) {
+func WriteVariant(buf *bytes.Buffer, value any) error {
+	switch v := (value).(type) {
 	case nil:
 		return WriteChar(buf, CHAR_CODE_UNDEFINED)
 	case int64:
@@ -175,33 +150,33 @@ func WriteVariant(buf *bytes.Buffer, value variant.Variant) error {
 	}
 }
 
-func ReadVariant(buf *bytes.Buffer) (variant.Variant, error) {
+func ReadVariant(buf *bytes.Buffer) (any, error) {
 	kind, err := ReadChar(buf)
 	if err != nil {
 		return nil, err
 	}
 	switch kind {
 	case CHAR_CODE_UNDEFINED:
-		return variant.New(nil), nil
+		return nil, nil
 	case CHAR_CODE_STRING:
 		val, err := ReadString(buf)
-		return variant.New(*val), err
+		return *val, err
 	case CHAR_CODE_NUMBER:
 		str, err := ReadString(buf)
 		if err != nil {
 			return nil, err
 		}
 		value, err := strconv.ParseFloat(*str, 64)
-		return variant.New(value), nil
+		return value, nil
 	case CHAR_CODE_JSON:
 		return ReadJson(buf)
 	case CHAR_CODE_FALSE:
-		return variant.New(false), nil
+		return false, nil
 	case CHAR_CODE_TRUE:
-		return variant.New(true), nil
+		return true, nil
 	case CHAR_CODE_BUFFER:
 		val, err := ReadBinary(buf)
-		return variant.New(*val), err
+		return *val, err
 	default:
 		panic("Not supported")
 	}

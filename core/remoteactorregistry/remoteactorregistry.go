@@ -43,18 +43,17 @@ func Obtain(invoker *invoke.StaticInvoker, hosts []string) (*ObtainResponse, err
 				ActorType:  SERVICE,
 				ActorId:    []string{},
 				ActionName: ACTION_OBTAIN,
-				Parameters: []variant.Variant{variant.New(ObtainRequest{})},
+				Parameters: []any{ObtainRequest{}},
 			},
 		}
 		resp := invoker.Invoke(&req)
 		if resp.Value != nil {
 			var value ObtainResponse
-			err := resp.Value.Get(&value)
+			err := variant.Assign(resp.Value, &value)
 			if err != nil {
 				return nil, err
 			}
 			return &value, nil
-
 		}
 	}
 	return nil, nil

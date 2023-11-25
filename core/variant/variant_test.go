@@ -2,70 +2,8 @@ package variant
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 )
-
-func TestVariantAnyWithString(t *testing.T) {
-	v := New("Hello")
-	var s any
-	v.Get(&s)
-	fmt.Printf("String %v\n", s)
-	if s != "Hello" {
-		t.Fatalf("Variant get for string should not return [%+v]", s)
-	}
-}
-
-func TestVariantTypedWithString(t *testing.T) {
-	v := New("Hello")
-	s := ""
-	v.Get(&s)
-	fmt.Printf("String %v\n", s)
-	if s != "Hello" {
-		t.Fatalf("Variant get for string should not return [%+v]", s)
-	}
-}
-
-func TestVariantAnyWithEmptyStruct(t *testing.T) {
-	type T struct{}
-
-	var a any
-	v := New(T{})
-	err := v.Get(&a)
-	fmt.Printf("EmptyStruct %v\n", a)
-	_, ok := a.(T)
-	if !ok {
-		t.Fatalf("Variant get for empty struct should not return [%+v]: %v", a, err)
-	}
-}
-
-func TestVariantAnyWithFilledStruct(t *testing.T) {
-	type T struct{ Name string }
-
-	var a any
-	v := New(T{Name: "Foo"})
-	err := v.Get(&a)
-	aa, ok := a.(T)
-	fmt.Printf("FilledStruct %+v\n", a)
-	if !ok {
-		t.Fatalf("Variant get should not return [%+v]: %v", a, err)
-	}
-	if aa.Name != "Foo" {
-		t.Fatalf("Variant get should be filled")
-	}
-}
-
-func TestVariantTypedWithFilledStruct(t *testing.T) {
-	type T struct{ Name string }
-
-	var a T
-	v := New(T{Name: "Foo"})
-	v.Get(&a)
-	fmt.Printf("FilledStruct %+v\n", a)
-	if a.Name != "Foo" {
-		t.Fatalf("Variant get should be filled")
-	}
-}
 
 type I interface{ GetName() string }
 type T struct{ Name string }
@@ -73,32 +11,12 @@ type T struct{ Name string }
 func (t T) GetName() string {
 	return t.Name
 }
-func TestVariantAnyWithFilledInterface(t *testing.T) {
-	var a I
-	v := New(T{Name: "Foo"})
-	v.Get(&a)
-	fmt.Printf("FilledInterface %+v\n", a)
-	if a.GetName() != "Foo" {
-		t.Fatalf("Variant get should be filled")
-	}
-}
-
-func TestVariantAnyWithFilledBytes(t *testing.T) {
-	var a []byte
-	v := New([]byte{0, 1, 2})
-	v.Get(&a)
-	fmt.Printf("FilledBytes %+v\n", a)
-	if len(a) != 3 {
-		t.Fatalf("Variant get should be filled")
-	}
-}
 
 func TestAssignNumber(t *testing.T) {
 	int0 := 42
 	bytes, _ := json.Marshal(int0)
 	var int1 any
 	json.Unmarshal(bytes, &int1)
-	fmt.Printf("Int1 %v", int1)
 	Check(t, 42.0, int1, "Int unmarshall to any should be ok (albeit converted to float)")
 	var int2 int
 	Assign(int1, &int2)

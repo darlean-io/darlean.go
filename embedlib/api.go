@@ -16,6 +16,7 @@ import (
 	"core/invoke"
 	"core/natstransport"
 	"core/remoteactorregistry"
+	"core/variant"
 	"fmt"
 	"time"
 )
@@ -61,7 +62,7 @@ func (api Api) Invoke(request *invoke.InvokeRequest, goCb invokeCb) {
 
 	// TODO encode variant
 	var value any
-	result.Get(&value)
+	variant.Assign(result, &value)
 	goCb(fmt.Sprint(value))
 }
 
