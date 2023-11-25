@@ -27,22 +27,32 @@ type StaticInvokeRequest struct {
 
 func (invoker *StaticInvoker) Listen() {
 	for tags := range invoker.transport.GetInputChannel() {
-		invoker.mutex.Lock()
-		call, ok := invoker.pendingCalls[tags.Remotecall_Id]
-		if ok {
-			delete(invoker.pendingCalls, tags.Remotecall_Id)
-		}
-		invoker.mutex.Unlock()
-
-		if !ok {
-			fmt.Println("Received value without matching call")
+		switch tags.Remotecall_Kind {
+		case "call":
+			fmt.Println("Ignore incoming message: 'call' is not yet implemented")
 			continue
+		case "return":
+			invoker.handleReturnMessage(tags)
 		}
+	}
+}
 
-		call.finished <- &InvokeResponse{
-			Value: tags.Value,
-			Error: tags.Error,
-		}
+func (invoker *StaticInvoker) handleReturnMessage(tags *wire.Tags) {
+	invoker.mutex.Lock()
+	call, found := invoker.pendingCalls[tags.Remotecall_Id]
+	if found {
+		delete(invoker.pendingCalls, tags.Remotecall_Id)
+	}
+	invoker.mutex.Unlock()
+
+	if !found {
+		fmt.Println("Received value without matching call")
+		return
+	}
+
+	call.finished <- &InvokeResponse{
+		Value: tags.Value,
+		Error: tags.Error,
 	}
 }
 

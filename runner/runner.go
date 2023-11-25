@@ -15,27 +15,20 @@ func toLowerCase(invoker *invoke.DynamicInvoker, input string) {
 		ActorType:  "echoactor",
 		ActorId:    []string{"A"},
 		ActionName: "echo",
-		Parameters: []variant.Variant{variant.New(input)},
+		Parameters: variant.Array(input),
 	}
 
-	response := invoker.Invoke(&req)
-	if response.Error != nil {
-		var value any
-		value, err := response.Error.Get(value)
-		if err != nil {
-			panic(err)
-		}
-		if value != nil {
-			fmt.Printf("Error for %v: %v", input, value)
-			panic(err)
-		}
-	}
-	var value any
-	value, err := response.Value.Get(value)
+	value, err := invoker.Invoke(&req)
 	if err != nil {
+		fmt.Printf("Error for %v: %v", input, value)
 		panic(err)
 	}
-	fmt.Printf("Received: %v -> %v\n", input, value)
+	var v string
+	err2 := value.Get(&v)
+	if err2 != nil {
+		panic(err)
+	}
+	fmt.Printf("Received: %v -> %v\n", input, v)
 }
 
 func main() {

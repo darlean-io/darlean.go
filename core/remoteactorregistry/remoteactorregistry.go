@@ -48,12 +48,12 @@ func Obtain(invoker *invoke.StaticInvoker, hosts []string) (*ObtainResponse, err
 		}
 		resp := invoker.Invoke(&req)
 		if resp.Value != nil {
-			var value *ObtainResponse
-			_, err := resp.Value.Get(&value)
+			var value ObtainResponse
+			err := resp.Value.Get(&value)
 			if err != nil {
 				return nil, err
 			}
-			return value, nil
+			return &value, nil
 
 		}
 	}
@@ -74,6 +74,10 @@ type RemoteActorRegistry struct {
 func (registry *RemoteActorRegistry) fetch() {
 	info, err := Obtain(registry.invoker, registry.hosts)
 	if err != nil {
+		return
+	}
+
+	if info == nil {
 		return
 	}
 

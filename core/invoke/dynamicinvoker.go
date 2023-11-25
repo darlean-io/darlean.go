@@ -23,14 +23,21 @@ func NewDynamicInvoker(staticInvoker *StaticInvoker, backoff backoff.BackOff, re
 	}
 }
 
-func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) *InvokeResponse {
+func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) (variant.Variant, *ActionError) {
 	var bo backoff.BackOffSession
 	useCache := true
 	cacheInvalidated := false
 	lazy := false
 	suggestions := []string{}
+	causes := []*ActionError{}
 	var cachePreparedKey [8]byte
+	triesLeft := 10
 	for {
+		triesLeft--
+		if triesLeft <= 0 {
+			break
+		}
+
 		info := invoker.registry.Get(request.ActorType)
 		receiver := extractBindName(request.ActorId, info.Placement.AppBindIdx)
 		doBackoff := true
@@ -87,13 +94,45 @@ func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) *InvokeResponse {
 			}
 			staticRequest.Lazy = lazy
 			lazy = false
+
 			response := invoker.staticInvoker.Invoke(&staticRequest)
-			if response.Error == nil {
-				return response
+
+			if response.Error != nil {
+				var error ActionError
+				err := response.Error.Get(&error)
+				if err != nil {
+					panic(err)
+					// IN plaats van variant, any gebruiken met een Assign
+					// func die een "ruwe any" omzet naar een struct
+					// go get github.com/mitchellh/mapstructure
+					causes = append(causes, NewFrameworkError(ActionErrorOptions{
+						Code:     "ERROR_PARSE_ERROR",
+						Template: "Action returned an error, but unable to parse the error",
+					}))
+				}
+				if error.Kind != ERROR_KIND_FRAMEWORK {
+					return nil, &error
+				} else {
+					causes = append(causes, &error)
+				}
+
+				redirect, present := error.Parameters[FRAMEWORK_ERROR_PARAMETER_REDIRECT_DESTINATION]
+				if present {
+					var redirects []string
+					err := redirect.Get(&redirects)
+					if err != nil {
+						suggestions = redirects
+					}
+				}
+				continue
+				// DONE: Fill suggestions based on redirect info in error and set doBackoff to false
+				// TODO: Also do this when lazy = true and other side indicates a refusal
 			}
-			// TODO: Fill suggestions based on redirect info in error and set doBackoff to false
-			// Also do this when lazy = true and other side indicates a refusal
-			// Do something with MigrationVersion?
+
+			if info.Placement.Sticky != nil && *info.Placement.Sticky {
+				invoker.cache.Update(request.ActorType, request.ActorId, *receiver)
+			}
+			return response.Value, nil
 		}
 
 		if !doBackoff {
@@ -103,15 +142,26 @@ func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) *InvokeResponse {
 		if bo == nil {
 			bo = invoker.backoff.Begin()
 		}
-
 		if !bo.BackOff() {
 			break
 		}
 	}
 
-	return &InvokeResponse{
-		Error: variant.New("invoke: All attempts failed"),
+	var cause string
+	if len(causes) > 0 {
+		cause = causes[0].Message
 	}
+
+	return nil, NewFrameworkError(ActionErrorOptions{
+		Code:     FRAMEWORK_ERROR_INVOKE_ERROR,
+		Template: "Failed to invoke remote method [ActionName] on an instance of [ActorType]: [FirstMessage]",
+		Parameters: map[string]any{
+			"ActorType":    request.ActorType,
+			"ActionName":   request.ActionName,
+			"FirstMessage": cause,
+		},
+		Nested: causes,
+	})
 }
 
 func extractBindName(id []string, bindIdx *int) *string {

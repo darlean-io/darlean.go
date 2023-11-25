@@ -13,7 +13,7 @@ type TransportTags struct {
 }
 
 type RemoteCallTags struct {
-	// 'call' | 'return'
+	// "call" | "return"
 	Remotecall_Kind string
 	Remotecall_Id   string
 }
@@ -61,8 +61,14 @@ func Serialize(buf *bytes.Buffer, tags Tags) error {
 	fastproto.WriteString(buf, nil)
 
 	// Tracing cids + parentuid
-	fastproto.WriteVariant(buf, nil)
-	fastproto.WriteString(buf, nil)
+	err := fastproto.WriteVariant(buf, nil)
+	if err != nil {
+		return err
+	}
+	err = fastproto.WriteString(buf, nil)
+	if err != nil {
+		return err
+	}
 
 	// RemoteCall
 	fastproto.WriteString(buf, &tags.Remotecall_Id)
@@ -86,12 +92,10 @@ func Serialize(buf *bytes.Buffer, tags Tags) error {
 	}
 	fastproto.WriteUnsignedInt(buf, len(tags.Arguments))
 	for _, arg := range tags.Arguments {
-		var value any
-		value, err := arg.Get(value)
+		err := fastproto.WriteVariant(buf, arg)
 		if err != nil {
 			return err
 		}
-		fastproto.WriteVariant(buf, value)
 	}
 
 	// Call response

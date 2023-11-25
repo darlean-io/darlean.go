@@ -11,9 +11,12 @@ type JsonVariant struct {
 	value []byte
 }
 
-func (variant *JsonVariant) Get(value any) (any, error) {
-	err := jsonbinary.Deserialize(variant.value, value)
-	return value, err
+func (variant *JsonVariant) Get(value any) error {
+	return jsonbinary.Deserialize(variant.value, value)
+}
+
+func (variant *JsonVariant) GetDirect() (any, bool) {
+	return nil, false
 }
 
 func newJsonVariant(value []byte) variant.Variant {
@@ -135,8 +138,15 @@ func ReadJson(buf *bytes.Buffer) (variant.Variant, error) {
 	return newJsonVariant(*data), nil
 }
 
-func WriteVariant(buf *bytes.Buffer, value any) error {
-	switch v := (value).(type) {
+func WriteVariant(buf *bytes.Buffer, value variant.Variant) error {
+	var extracted any
+	if value != nil {
+		err := value.Get(&extracted)
+		if err != nil {
+			return err
+		}
+	}
+	switch v := (extracted).(type) {
 	case nil:
 		return WriteChar(buf, CHAR_CODE_UNDEFINED)
 	case int64:
