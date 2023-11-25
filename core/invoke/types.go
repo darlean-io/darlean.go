@@ -1,6 +1,7 @@
 package invoke
 
 import (
+	"core/variant"
 	"fmt"
 	"strings"
 )
@@ -51,6 +52,16 @@ func (error ActionError) Error() string {
 func FormatTemplate(template string, parameters map[string]any) string {
 	message := template
 	for key, value := range parameters {
+		assignable, supported := value.(variant.Assignable)
+		if supported {
+			var target any
+			err := assignable.AssignTo(target)
+			if err != nil {
+				value = err.Error()
+			} else {
+				value = target
+			}
+		}
 		message = strings.ReplaceAll(message, "["+key+"]", "\""+fmt.Sprint(value)+"\"")
 	}
 	return message

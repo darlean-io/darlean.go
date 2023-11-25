@@ -3,6 +3,7 @@ package fastproto
 import (
 	"bytes"
 	"core/jsonbinary"
+	"core/variant"
 	"strconv"
 )
 
@@ -112,12 +113,11 @@ func ReadJson(buf *bytes.Buffer) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	var result any
+	//var result any
 	if len(*data) == 0 {
 		return nil, nil
 	}
-	err = jsonbinary.Deserialize(*data, &result)
-	return result, err
+	return variant.NewJsonAssignable(*data), err
 }
 
 func WriteVariant(buf *bytes.Buffer, value any) error {
