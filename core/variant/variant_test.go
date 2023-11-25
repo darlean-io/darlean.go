@@ -81,7 +81,7 @@ func TestAssignInterface(t *testing.T) {
 }
 
 func TestAssignArray(t *testing.T) {
-	val0 := []T{T{Name: "Foo"}, T{Name: "Bar"}}
+	val0 := []T{{Name: "Foo"}, {Name: "Bar"}}
 	var val1 []T
 	Assign(val0, &val1)
 	Check(t, val1[0].GetName(), "Foo", "Direct assignment must be ok")
