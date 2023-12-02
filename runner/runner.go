@@ -44,7 +44,7 @@ func main() {
 	staticInvoker := invoke.NewStaticInvoker(transport, OUR_APP_ID)
 	registry := remoteactorregistry.New(HOSTS, staticInvoker)
 
-	backoff := backoff.Fixed(time.Second, 5, 0)
+	backoff := backoff.Exponential(10*time.Millisecond, 8, 4.0, 0.25)
 	invoker := invoke.NewDynamicInvoker(staticInvoker, backoff, registry)
 
 	time.Sleep(time.Second)

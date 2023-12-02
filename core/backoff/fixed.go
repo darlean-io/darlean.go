@@ -1,10 +1,15 @@
 package backoff
 
-import "time"
+import (
+	"math"
+	"math/rand"
+	"time"
+)
 
 type fixedBackOff struct {
-	duration time.Duration
-	count    int
+	duration   time.Duration
+	count      int
+	hysteresis float32
 }
 
 type fixedBackOffSession struct {
@@ -12,10 +17,11 @@ type fixedBackOffSession struct {
 	remaining int
 }
 
-func Fixed(duration time.Duration, count int, histeresis float32) BackOff {
+func Fixed(duration time.Duration, count int, hysteresis float32) BackOff {
 	return fixedBackOff{
-		duration: duration,
-		count:    count,
+		duration:   duration,
+		count:      count,
+		hysteresis: hysteresis,
 	}
 }
 
@@ -30,7 +36,10 @@ func (session *fixedBackOffSession) BackOff() bool {
 	if session.remaining <= 0 {
 		return false
 	}
-	time.Sleep(session.duration)
+	deviation := float64(session.hysteresis) * rand.Float64()
+	sleepTime := time.Duration(math.Round(float64(int64(session.duration)) * (1.0 - deviation)))
+
+	time.Sleep(sleepTime)
 	session.remaining--
 	return (session.remaining > 0)
 }
