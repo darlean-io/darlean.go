@@ -3,8 +3,10 @@ package fastproto
 import (
 	"bytes"
 	"core/jsonbinary"
-	"core/variant"
+	"core/jsonvariant"
 	"strconv"
+
+	pool "github.com/libp2p/go-buffer-pool"
 )
 
 const CHAR_CODE_ZERO_DIGITS = 'a'
@@ -15,6 +17,9 @@ const CHAR_CODE_NUMBER = 'n'
 const CHAR_CODE_STRING = 's'
 const CHAR_CODE_TRUE = 't'
 const CHAR_CODE_UNDEFINED = 'u'
+
+var bufferPool = new(pool.BufferPool)
+var bytesPool = jsonbinary.BytesPool(bufferPool)
 
 func WriteUnsignedInt(buf *bytes.Buffer, value int) error {
 	if value == 0 {
@@ -100,10 +105,11 @@ func WriteJson(buf *bytes.Buffer, value any) error {
 	if value == nil {
 		return WriteBinary(buf, nil)
 	}
-	serialized, err := jsonbinary.Serialize(value)
+	serialized, err := jsonbinary.Serialize(value, bufferPool)
 	if err != nil {
 		return err
 	}
+	defer bufferPool.Put(serialized)
 	WriteBinary(buf, &serialized)
 	return nil
 }
@@ -117,7 +123,7 @@ func ReadJson(buf *bytes.Buffer) (any, error) {
 	if len(*data) == 0 {
 		return nil, nil
 	}
-	return variant.NewJsonAssignable(*data), err
+	return jsonvariant.NewJsonAssignable(*data), err
 }
 
 func WriteVariant(buf *bytes.Buffer, value any) error {

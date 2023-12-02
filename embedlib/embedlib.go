@@ -7,7 +7,6 @@ package main
 import "C"
 import (
 	"core/invoke"
-	"core/variant"
 	"strings"
 )
 
@@ -36,7 +35,7 @@ func Invoke(cb C.invoke_cb, actorType string, actorId []string, actionName strin
 		ActorType:  actorType,
 		ActorId:    actorId, //strings.Split(actorId, ","),
 		ActionName: actionName,
-		Parameters: []variant.Variant{variant.New(arguments)},
+		Parameters: []any{arguments},
 	}
 	apiInstance.Invoke(&request, goCb)
 }
