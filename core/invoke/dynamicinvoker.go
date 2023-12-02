@@ -1,6 +1,7 @@
 package invoke
 
 import (
+	"core"
 	"core/backoff"
 	"core/services/actorregistry"
 	"core/variant"
@@ -24,13 +25,13 @@ func NewDynamicInvoker(staticInvoker *StaticInvoker, backoff backoff.BackOff, re
 	}
 }
 
-func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) (any, *ActionError) {
+func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) (any, *core.ActionError) {
 	var bo backoff.BackOffSession
 	useCache := true
 	cacheInvalidated := false
 	lazy := false
 	suggestions := []string{}
-	causes := []*ActionError{}
+	causes := []*core.ActionError{}
 	var cachePreparedKey [8]byte
 	triesLeft := 10
 	for {
@@ -99,15 +100,15 @@ func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) (any, *ActionError
 			response := invoker.staticInvoker.Invoke(&staticRequest)
 
 			if response.Error != nil {
-				var error ActionError
+				var error core.ActionError
 				err := variant.Assign(response.Error, &error)
 				if err != nil {
-					causes = append(causes, NewFrameworkError(ActionErrorOptions{
+					causes = append(causes, core.NewFrameworkError(core.ActionErrorOptions{
 						Code:     "ERROR_PARSE_ERROR",
 						Template: "Action returned an error, but unable to parse the error",
 					}))
 				}
-				if error.Kind != ERROR_KIND_FRAMEWORK {
+				if error.Kind != core.ERROR_KIND_FRAMEWORK {
 					return nil, &error
 				} else {
 					causes = append(causes, &error)
@@ -131,7 +132,7 @@ func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) (any, *ActionError
 			}
 			return response.Value, nil
 		} else {
-			causes = append(causes, NewFrameworkError(ActionErrorOptions{
+			causes = append(causes, core.NewFrameworkError(core.ActionErrorOptions{
 				Code:     FRAMEWORK_ERROR_NO_RECEIVERS_AVAILABLE,
 				Template: "No receivers available at [RequestTime] to process an action on an instance of [ActorType]",
 				Parameters: map[string]any{
@@ -159,7 +160,7 @@ func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) (any, *ActionError
 		cause = causes[0].Message
 	}
 
-	return nil, NewFrameworkError(ActionErrorOptions{
+	return nil, core.NewFrameworkError(core.ActionErrorOptions{
 		Code:     FRAMEWORK_ERROR_INVOKE_ERROR,
 		Template: "Failed to invoke remote method [ActionName] on an instance of [ActorType]: [FirstMessage]",
 		Parameters: map[string]any{
