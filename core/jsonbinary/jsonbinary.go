@@ -5,6 +5,7 @@ import (
 	"context"
 	"core/binary"
 	"core/variant"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"strconv"
@@ -114,6 +115,10 @@ func Deserialize(data []byte, value any) error {
 			offset := len(header) + int(jsonLen) + 1
 			buffers := make([][]byte, len(lengths))
 			for i, length := range lengths {
+				if length == "" {
+					// Inline b64, not yet supported
+					continue
+				}
 				lengthInt, err := strconv.ParseInt(length, 10, 32)
 				if err != nil {
 					return err
@@ -135,7 +140,10 @@ func Deserialize(data []byte, value any) error {
 				return err
 			}
 			// Find all buffer occurrances and add the "data" to them
-			analyzeBufferStructs(&bufferdata, temp)
+			err = analyzeBufferStructs(&bufferdata, temp)
+			if err != nil {
+				return err
+			}
 			// Try to map the plain structure onto the result value
 			variant.Assign(temp, value)
 			return nil
@@ -144,7 +152,7 @@ func Deserialize(data []byte, value any) error {
 	return json.Unmarshal(buf.Bytes(), value)
 }
 
-func analyzeBufferStructs(bufferData *binary.BufferContext, value any) {
+func analyzeBufferStructs(bufferData *binary.BufferContext, value any) error {
 	m, ok := value.(map[string]any)
 	if ok {
 		b, has := m["__b"]
@@ -162,17 +170,35 @@ func analyzeBufferStructs(bufferData *binary.BufferContext, value any) {
 					m[binary.INTERNAL_FIELD] = bufferData.Buffers[0]
 					bufferData.Buffers = bufferData.Buffers[1:]
 				}
+
+				if m[binary.INTERNAL_FIELD] == nil {
+					b64, has := m["b64"]
+					if has {
+						decoded, err := base64.StdEncoding.DecodeString(b64.(string))
+						if err != nil {
+							return err
+						}
+						m[binary.INTERNAL_FIELD] = decoded
+					}
+				}
 			}
-			return
+			return nil
 		}
 		for _, v := range m {
-			analyzeBufferStructs(bufferData, v)
+			err := analyzeBufferStructs(bufferData, v)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	a, ok := value.([]any)
 	if ok {
 		for _, v := range a {
-			analyzeBufferStructs(bufferData, v)
+			err := analyzeBufferStructs(bufferData, v)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
