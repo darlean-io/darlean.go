@@ -10,15 +10,15 @@ import (
 )
 
 type DynamicInvoker struct {
-	staticInvoker *StaticInvoker
+	staticInvoker TransportInvoker
 	backoff       backoff.BackOff
 	registry      actorregistry.ActorRegistry
 	cache         *PlacementCache
 }
 
-func NewDynamicInvoker(staticInvoker *StaticInvoker, backoff backoff.BackOff, registry actorregistry.ActorRegistry) DynamicInvoker {
+func NewDynamicInvoker(transportInvoker TransportInvoker, backoff backoff.BackOff, registry actorregistry.ActorRegistry) DynamicInvoker {
 	return DynamicInvoker{
-		staticInvoker: staticInvoker,
+		staticInvoker: transportInvoker,
 		backoff:       backoff,
 		registry:      registry,
 		cache:         NewPlacementCache(),
@@ -90,7 +90,7 @@ func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) (any, *core.Action
 		}
 
 		if receiver != nil {
-			staticRequest := StaticInvokeRequest{
+			staticRequest := TransportHandlerInvokeRequest{
 				InvokeRequest: *request,
 				Receiver:      *receiver,
 			}

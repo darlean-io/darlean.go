@@ -16,3 +16,12 @@ type InvokeResponse struct {
 	Error any
 	Value any
 }
+
+type TransportHandlerInvokeRequest struct {
+	InvokeRequest
+	Receiver string
+}
+
+type TransportInvoker interface {
+	Invoke(req *TransportHandlerInvokeRequest) *InvokeResponse
+}

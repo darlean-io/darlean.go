@@ -16,6 +16,7 @@ import (
 	"core/invoke"
 	"core/natstransport"
 	"core/remoteactorregistry"
+	"core/transporthandler"
 	"core/variant"
 	"fmt"
 	"time"
@@ -33,7 +34,7 @@ func NewApi(appId string, natsAddr string, hosts []string) *Api {
 		panic(err)
 	}
 
-	staticInvoker := invoke.NewStaticInvoker(transport, appId)
+	staticInvoker := transporthandler.New(transport, nil, appId)
 	registry := remoteactorregistry.New(hosts, staticInvoker)
 
 	backoff := backoff.Exponential(10*time.Millisecond, 8, 4.0, 0.25)

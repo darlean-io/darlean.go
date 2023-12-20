@@ -65,8 +65,9 @@ func (transport *NatsTransport) Send(tags wire.Tags) error {
 	return err
 }
 
-func (transport *NatsTransport) listen(input chan *nats.Msg, input2 chan *wire.Tags) {
-	defer close(input2)
+// Listens to nats.Msg on input and forwards them as wire.Tags messages to output.
+func (transport *NatsTransport) listen(input chan *nats.Msg, output chan *wire.Tags) {
+	defer close(output)
 
 	for msg := range input {
 		buf := bytes.NewBuffer(msg.Data)
@@ -81,7 +82,7 @@ func (transport *NatsTransport) listen(input chan *nats.Msg, input2 chan *wire.T
 			if err != nil {
 				panic(err)
 			}
-			input2 <- &tags
+			output <- &tags
 		}
 	}
 }
@@ -97,6 +98,7 @@ func (transport *NatsTransport) Stop() {
 	}
 }
 
+// Returns the channel to which incoming messages are emitted.
 func (transport NatsTransport) GetInputChannel() chan *wire.Tags {
 	return transport.tagsinput
 }

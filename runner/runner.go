@@ -6,6 +6,7 @@ import (
 	"core/natstransport"
 	"core/portal"
 	"core/remoteactorregistry"
+	"core/transporthandler"
 	"core/variant"
 	"fmt"
 	"time"
@@ -62,7 +63,7 @@ func main() {
 		panic(err)
 	}
 
-	staticInvoker := invoke.NewStaticInvoker(transport, OUR_APP_ID)
+	staticInvoker := transporthandler.New(transport, nil, OUR_APP_ID)
 	registry := remoteactorregistry.New(HOSTS, staticInvoker)
 
 	backoff := backoff.Exponential(10*time.Millisecond, 8, 4.0, 0.25)

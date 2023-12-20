@@ -35,9 +35,9 @@ type ObtainResponse struct {
 
 const ACTION_OBTAIN = "obtain"
 
-func Obtain(invoker *invoke.StaticInvoker, hosts []string) (*ObtainResponse, error) {
+func Obtain(invoker invoke.TransportInvoker, hosts []string) (*ObtainResponse, error) {
 	for _, host := range hosts {
-		req := invoke.StaticInvokeRequest{
+		req := invoke.TransportHandlerInvokeRequest{
 			Receiver: host,
 			InvokeRequest: invoke.InvokeRequest{
 				ActorType:  SERVICE,
@@ -63,7 +63,7 @@ type RemoteActorRegistry struct {
 	hosts     []string
 	actors    map[string](actorregistry.ActorInfo)
 	nonce     string
-	invoker   *invoke.StaticInvoker
+	invoker   invoke.TransportInvoker
 	mutex     *sync.RWMutex
 	stop      chan bool
 	force     chan bool
@@ -149,7 +149,7 @@ func (registry *RemoteActorRegistry) Stop() {
 	registry.stop <- true
 }
 
-func New(hosts []string, invoker *invoke.StaticInvoker) *RemoteActorRegistry {
+func New(hosts []string, invoker invoke.TransportInvoker) *RemoteActorRegistry {
 	stop := make(chan bool)
 	force := make(chan bool)
 
