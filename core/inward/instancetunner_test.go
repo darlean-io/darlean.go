@@ -36,7 +36,7 @@ func (wrapper *TestWrapper) Deactivate() error {
 
 func (wrapper *TestWrapper) Perform(actionName normalized.ActionName, args []any) (result any, err error) {
 	wrapper.history = append(wrapper.history, fmt.Sprintf("Perform {%v} with {%v}", string(actionName), args[0]))
-	if actionName == "NoneFaster" {
+	if strings.Contains(string(actionName), "faster") {
 		time.Sleep(SLEEP_BASIS_SHORT)
 	} else {
 		time.Sleep(SLEEP_BASIS)
@@ -88,10 +88,10 @@ func TestInstanceRunner_Exclusive(t *testing.T) {
 	checks.Equal(t, []string{
 		"Activate",
 		"Activated",
-		"Perform {Exclusive} with {Hello}",
-		"Performed {Exclusive} with {Hello}",
-		"Perform {Exclusive} with {World}",
-		"Performed {Exclusive} with {World}",
+		"Perform {exclusive} with {Hello}",
+		"Performed {exclusive} with {Hello}",
+		"Perform {exclusive} with {World}",
+		"Performed {exclusive} with {World}",
 		"Deactivate",
 		"Deactivated",
 	}, wrapper.history, "Events should be as expected")
@@ -137,14 +137,14 @@ func TestInstanceRunner_Shared(t *testing.T) {
 	checks.Equal(t, []string{
 		"Activate",
 		"Activated",
-		"Perform {Shared} with {Hello}",
-		"Perform {Shared} with {World}",
-		"Performed {Shared} with {Hello}",
-		"Performed {Shared} with {World}",
-		"Perform {Shared} with {Hello2}",
-		"Perform {Shared} with {World2}",
-		"Performed {Shared} with {Hello2}",
-		"Performed {Shared} with {World2}",
+		"Perform {shared} with {Hello}",
+		"Perform {shared} with {World}",
+		"Performed {shared} with {Hello}",
+		"Performed {shared} with {World}",
+		"Perform {shared} with {Hello2}",
+		"Perform {shared} with {World2}",
+		"Performed {shared} with {Hello2}",
+		"Performed {shared} with {World2}",
 		"Deactivate",
 		"Deactivated",
 	}, wrapper.history, "Events should be as expected")
@@ -193,30 +193,30 @@ func TestInstanceRunner_None(t *testing.T) {
 	// two truth items for these cases.
 	truth := []any{[]string{
 		"Activate",
-		"Perform {NoneFaster} with {Hello}",
-		"Perform {None} with {World}",
-		"Performed {NoneFaster} with {Hello}",
+		"Perform {nonefaster} with {Hello}",
+		"Perform {none} with {World}",
+		"Performed {nonefaster} with {Hello}",
 		"Activated",
-		"Performed {None} with {World}",
-		"Perform {None} with {Foo}",
-		"Performed {None} with {Foo}",
+		"Performed {none} with {World}",
+		"Perform {none} with {Foo}",
+		"Performed {none} with {Foo}",
 		"Deactivate",
-		"Perform {None} with {During-deactivate}",
+		"Perform {none} with {During-deactivate}",
 		"Deactivated",
-		"Performed {None} with {During-deactivate}",
+		"Performed {none} with {During-deactivate}",
 	}, []string{
-		"Perform {NoneFaster} with {Hello}",
+		"Perform {nonefaster} with {Hello}",
 		"Activate",
-		"Perform {None} with {World}",
-		"Performed {NoneFaster} with {Hello}",
+		"Perform {none} with {World}",
+		"Performed {nonefaster} with {Hello}",
 		"Activated",
-		"Performed {None} with {World}",
-		"Perform {None} with {Foo}",
-		"Performed {None} with {Foo}",
+		"Performed {none} with {World}",
+		"Perform {none} with {Foo}",
+		"Performed {none} with {Foo}",
 		"Deactivate",
-		"Perform {None} with {During-deactivate}",
+		"Perform {none} with {During-deactivate}",
 		"Deactivated",
-		"Performed {None} with {During-deactivate}",
+		"Performed {none} with {During-deactivate}",
 	}}
 	checks.EqualOneOf(t, truth, wrapper.history, "Events should be as expected")
 
