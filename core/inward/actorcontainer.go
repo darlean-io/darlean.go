@@ -30,6 +30,7 @@ type StandardActorContainer struct {
 
 func NewStandardActorContainer(requiresLock bool, actionDefs map[normalized.ActionName]ActionDef, wrapperFactory WrapperFactory, onFinished func()) *StandardActorContainer {
 	return &StandardActorContainer{
+		instances:      make(map[key]InstanceRunner),
 		requiresLock:   requiresLock,
 		actionDefs:     actionDefs,
 		wrapperFactory: wrapperFactory,
@@ -38,12 +39,13 @@ func NewStandardActorContainer(requiresLock bool, actionDefs map[normalized.Acti
 	}
 }
 
-func (container *StandardActorContainer) Dispatch(call wire.Tags, onFinished FinishedHandler) {
+func (container *StandardActorContainer) Dispatch(call *wire.ActorCallRequest, onFinished FinishedHandler) {
 	instancerunner, err := container.obtainInstanceRunner(call.ActorId)
 	if err != nil {
 		onFinished(nil, err)
+		return
 	}
-	instancerunner.Invoke(&call.ActorCallRequest, onFinished)
+	instancerunner.Invoke(call, onFinished)
 }
 
 func (container *StandardActorContainer) obtainInstanceRunner(actorId []string) (InstanceRunner, error) {
@@ -101,7 +103,7 @@ func (container *StandardActorContainer) handleDeactivate(key key) {
 }
 
 func makeKey(keyParts []string) key {
-	parts := []string{}
+	parts := make([]string, len(keyParts)*2)
 	for i, p := range keyParts {
 		parts[2*i] = strconv.FormatInt(int64(len(p)), 10)
 		parts[2*i+1] = p

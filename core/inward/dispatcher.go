@@ -7,7 +7,7 @@ import (
 )
 
 type ActorContainer interface {
-	Dispatch(call wire.Tags) error
+	Dispatch(call wire.ActorCallRequest) error
 }
 
 type ActorInfo struct {
@@ -31,7 +31,7 @@ func (dispatcher Dispatcher) Dispatch(call wire.Tags) error {
 		return fmt.Errorf("Actor type not registered: %s", actorType)
 	}
 
-	return info.container.Dispatch(call)
+	return info.container.Dispatch(call.ActorCallRequest)
 }
 
 func (dispatcher Dispatcher) RegisterActorType(info ActorInfo) {
