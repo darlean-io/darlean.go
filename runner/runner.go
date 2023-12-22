@@ -3,9 +3,11 @@ package main
 import (
 	"core/backoff"
 	"core/invoke"
+	"core/inward"
 	"core/natstransport"
 	"core/portal"
 	"core/remoteactorregistry"
+	"core/services/actorregistry"
 	"core/transporthandler"
 	"core/variant"
 	"fmt"
@@ -64,12 +66,21 @@ func main() {
 	}
 
 	staticInvoker := transporthandler.New(transport, nil, OUR_APP_ID)
-	registry := remoteactorregistry.New(HOSTS, staticInvoker)
+	registry := remoteactorregistry.NewFetcher(HOSTS, staticInvoker)
+	registry2 := remoteactorregistry.NewPusher(HOSTS, OUR_APP_ID, staticInvoker)
 
 	backoff := backoff.Exponential(10*time.Millisecond, 8, 4.0, 0.25)
 	invoker := invoke.NewDynamicInvoker(staticInvoker, backoff, registry)
 
 	time.Sleep(time.Second)
+
+	disp := inward.NewDispatcher(registry2)
+	container := inward.NewStandardActorContainer(false)
+	disp.RegisterActorType(inward.ActorInfo{
+		ActorType: "goechoactor",
+		Container: container,
+		Placement: actorregistry.ActorPlacement{},
+	})
 
 	p := portal.New(&invoker)
 	echoPortal := portal.ForType[EchoActor](p)
@@ -89,5 +100,6 @@ func main() {
 
 	time.Sleep(15 * time.Second)
 	registry.Stop()
+	registry2.Stop()
 	transport.Stop()
 }

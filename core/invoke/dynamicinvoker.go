@@ -12,11 +12,11 @@ import (
 type DynamicInvoker struct {
 	staticInvoker TransportInvoker
 	backoff       backoff.BackOff
-	registry      actorregistry.ActorRegistry
+	registry      actorregistry.ActorRegistryFetcher
 	cache         *PlacementCache
 }
 
-func NewDynamicInvoker(transportInvoker TransportInvoker, backoff backoff.BackOff, registry actorregistry.ActorRegistry) DynamicInvoker {
+func NewDynamicInvoker(transportInvoker TransportInvoker, backoff backoff.BackOff, registry actorregistry.ActorRegistryFetcher) DynamicInvoker {
 	return DynamicInvoker{
 		staticInvoker: transportInvoker,
 		backoff:       backoff,

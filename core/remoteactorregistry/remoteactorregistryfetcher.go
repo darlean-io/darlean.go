@@ -8,33 +8,6 @@ import (
 	"time"
 )
 
-const SERVICE = "io.darlean.actorregistryservice"
-
-type ObtainRequest struct {
-}
-
-type ApplicationInfo struct {
-	Name             string  `json:"name"`
-	MigrationVersion *string `json:"migrationVersion"`
-}
-
-type ActorPlacement struct {
-	AppBindIdx *int  `json:"appBindIdx"`
-	Sticky     *bool `json:"sticky"`
-}
-
-type ActorInfo struct {
-	Applications []ApplicationInfo `json:"applications"`
-	Placement    ActorPlacement    `json:"Placement"`
-}
-
-type ObtainResponse struct {
-	Nonce     string               `json:"nonce"`
-	ActorInfo map[string]ActorInfo `json:"actorInfo"`
-}
-
-const ACTION_OBTAIN = "obtain"
-
 func Obtain(invoker invoke.TransportInvoker, hosts []string) (*ObtainResponse, error) {
 	for _, host := range hosts {
 		req := invoke.TransportHandlerInvokeRequest{
@@ -59,7 +32,7 @@ func Obtain(invoker invoke.TransportInvoker, hosts []string) (*ObtainResponse, e
 	return nil, nil
 }
 
-type RemoteActorRegistry struct {
+type RemoteActorRegistryFetcher struct {
 	hosts     []string
 	actors    map[string](actorregistry.ActorInfo)
 	nonce     string
@@ -70,7 +43,7 @@ type RemoteActorRegistry struct {
 	lastFetch time.Time
 }
 
-func (registry *RemoteActorRegistry) fetch() {
+func (registry *RemoteActorRegistryFetcher) fetch() {
 	info, err := Obtain(registry.invoker, registry.hosts)
 	if err != nil {
 		return
@@ -110,14 +83,14 @@ func (registry *RemoteActorRegistry) fetch() {
 	registry.lastFetch = time.Now()
 }
 
-func (registry *RemoteActorRegistry) forceFetch() {
+func (registry *RemoteActorRegistryFetcher) forceFetch() {
 	now := time.Now()
 	if now.Sub(registry.lastFetch) > (100 * time.Millisecond) {
 		registry.fetch()
 	}
 }
 
-func (registry *RemoteActorRegistry) loop(stop <-chan bool, force <-chan bool, interval time.Duration) {
+func (registry *RemoteActorRegistryFetcher) loop(stop <-chan bool, force <-chan bool, interval time.Duration) {
 	for {
 		registry.fetch()
 		select {
@@ -131,7 +104,7 @@ func (registry *RemoteActorRegistry) loop(stop <-chan bool, force <-chan bool, i
 	}
 }
 
-func (registry *RemoteActorRegistry) Get(actorType string) *actorregistry.ActorInfo {
+func (registry *RemoteActorRegistryFetcher) Get(actorType string) *actorregistry.ActorInfo {
 	registry.mutex.RLock()
 	info, has := registry.actors[actorType]
 	registry.mutex.RUnlock()
@@ -145,17 +118,17 @@ func (registry *RemoteActorRegistry) Get(actorType string) *actorregistry.ActorI
 	return &info
 }
 
-func (registry *RemoteActorRegistry) Stop() {
+func (registry *RemoteActorRegistryFetcher) Stop() {
 	registry.stop <- true
 }
 
-func New(hosts []string, invoker invoke.TransportInvoker) *RemoteActorRegistry {
+func NewFetcher(hosts []string, invoker invoke.TransportInvoker) *RemoteActorRegistryFetcher {
 	stop := make(chan bool)
 	force := make(chan bool)
 
 	var mutex sync.RWMutex
 
-	registry := RemoteActorRegistry{
+	registry := RemoteActorRegistryFetcher{
 		hosts:   hosts,
 		actors:  make(map[string]actorregistry.ActorInfo),
 		nonce:   "",

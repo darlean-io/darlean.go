@@ -15,6 +15,15 @@ type ActorInfo struct {
 	Placement    ActorPlacement
 }
 
-type ActorRegistry interface {
+type ActorPushInfo struct {
+	Placement        ActorPlacement
+	MigrationVersion string
+}
+
+type ActorRegistryFetcher interface {
 	Get(actorType string) *ActorInfo
+}
+
+type ActorRegistryPusher interface {
+	Set(info map[string]ActorPushInfo)
 }

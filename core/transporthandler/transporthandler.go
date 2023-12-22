@@ -23,7 +23,7 @@ type TransportHandler struct {
 }
 
 type InwardCallDispatcher interface {
-	Dispatch(tags *wire.Tags) error
+	Dispatch(tags *wire.ActorCallRequest, onFinished func(*wire.ActorCallResponse))
 }
 
 func (invoker *TransportHandler) Listen() {
@@ -35,7 +35,23 @@ func (invoker *TransportHandler) Listen() {
 				continue
 			}
 
-			fmt.Println("transporthandler: Ignore incoming message: 'call' is not yet implemented")
+			go func() {
+				invoker.dispatcher.Dispatch(&tags.ActorCallRequest, func(response *wire.ActorCallResponse) {
+					responseMsg := wire.Tags{
+						TransportTags: wire.TransportTags{
+							Transport_Receiver: tags.Transport_Return,
+							Transport_Return:   invoker.appId,
+						},
+						RemoteCallTags: wire.RemoteCallTags{
+							Remotecall_Kind: "return",
+							Remotecall_Id:   tags.Remotecall_Id,
+						},
+						ActorCallResponse: *response,
+					}
+					invoker.transport.Send(responseMsg)
+				})
+			}()
+
 			continue
 		case "return":
 			invoker.handleReturnMessage(tags)
