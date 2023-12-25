@@ -1,6 +1,6 @@
 package core
 
-import "core/wire"
+import "github.com/darlean-io/darlean.go/core/wire"
 
 type Transport interface {
 	GetInputChannel() chan *wire.Tags

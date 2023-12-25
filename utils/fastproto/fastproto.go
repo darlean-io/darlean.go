@@ -2,9 +2,10 @@ package fastproto
 
 import (
 	"bytes"
-	"core/jsonbinary"
-	"core/jsonvariant"
 	"strconv"
+
+	"github.com/darlean-io/darlean.go/utils/jsonbinary"
+	"github.com/darlean-io/darlean.go/utils/jsonvariant"
 
 	pool "github.com/libp2p/go-buffer-pool"
 )

@@ -2,8 +2,9 @@ package wire
 
 import (
 	"bytes"
-	"core/fastproto"
 	"fmt"
+
+	"github.com/darlean-io/darlean.go/utils/fastproto"
 )
 
 type TransportTags struct {

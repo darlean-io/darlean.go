@@ -1,11 +1,12 @@
 package inward
 
 import (
-	"core/normalized"
-	"core/wire"
 	"errors"
 	"fmt"
 	"sync"
+
+	"github.com/darlean-io/darlean.go/core/normalized"
+	"github.com/darlean-io/darlean.go/core/wire"
 )
 
 type InstanceWrapper interface {

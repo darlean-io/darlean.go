@@ -1,4 +1,4 @@
-module core
+module github.com/darlean-io/darlean.go/core
 
 go 1.21.3
 

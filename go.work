@@ -1,7 +1,9 @@
 go 1.21.3
 
 use (
+	./base
 	./core
 	./embedlib
-	./runner
+	./examples/runner
+	./utils
 )

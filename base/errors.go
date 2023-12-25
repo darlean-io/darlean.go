@@ -1,9 +1,10 @@
-package core
+package base
 
 import (
-	"core/variant"
 	"fmt"
 	"strings"
+
+	"github.com/darlean-io/darlean.go/utils/variant"
 )
 
 type ErrorKind string

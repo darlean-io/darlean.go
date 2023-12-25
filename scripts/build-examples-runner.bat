@@ -1,0 +1,1 @@
+go -C runner build

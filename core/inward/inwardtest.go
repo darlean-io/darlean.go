@@ -1,10 +1,11 @@
 package inward
 
 import (
-	"core/normalized"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/darlean-io/darlean.go/core/normalized"
 )
 
 type TestActorWrapper struct {

@@ -1,11 +1,12 @@
 package inward
 
 import (
-	"core/checks"
-	"core/wire"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/darlean-io/darlean.go/core/wire"
+	"github.com/darlean-io/darlean.go/utils/checks"
 )
 
 func TestInstanceRunner_Exclusive(t *testing.T) {

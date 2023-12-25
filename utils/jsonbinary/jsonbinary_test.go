@@ -1,12 +1,13 @@
 package jsonbinary
 
 import (
-	"core/binary"
-	"core/checks"
-	"core/variant"
 	"fmt"
 	"testing"
 
+	"github.com/darlean-io/darlean.go/utils/checks"
+
+	"github.com/darlean-io/darlean.go/utils/binary"
+	"github.com/darlean-io/darlean.go/utils/variant"
 	pool "github.com/libp2p/go-buffer-pool"
 )
 

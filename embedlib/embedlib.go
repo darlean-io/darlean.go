@@ -6,8 +6,9 @@ package main
 // void makeCallback(_GoString_ bufhandle, invoke_cb cb);
 import "C"
 import (
-	"core/invoke"
 	"strings"
+
+	"github.com/darlean-io/darlean.go/core/invoke"
 )
 
 var apiInstance *Api

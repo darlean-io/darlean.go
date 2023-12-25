@@ -1,10 +1,12 @@
 package portal
 
 import (
-	"core/invoke"
-	"core/variant"
 	"reflect"
 	"strings"
+
+	"github.com/darlean-io/darlean.go/core/invoke"
+
+	"github.com/darlean-io/darlean.go/utils/variant"
 )
 
 type PortalActor[T any] struct {

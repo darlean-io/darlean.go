@@ -1,0 +1,1 @@
+go -C core/internal/main build

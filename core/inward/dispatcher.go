@@ -1,10 +1,12 @@
 package inward
 
 import (
-	"core/normalized"
-	"core/services/actorregistry"
-	"core/wire"
 	"fmt"
+
+	"github.com/darlean-io/darlean.go/core/normalized"
+	"github.com/darlean-io/darlean.go/core/wire"
+
+	"github.com/darlean-io/darlean.go/base/services/actorregistry"
 )
 
 type ActorContainer interface {

@@ -1,17 +1,19 @@
 package main
 
 import (
-	"core/backoff"
-	"core/invoke"
-	"core/inward"
-	"core/natstransport"
-	"core/portal"
-	"core/remoteactorregistry"
-	"core/services/actorregistry"
-	"core/transporthandler"
-	"core/variant"
 	"fmt"
 	"time"
+
+	"github.com/darlean-io/darlean.go/base/portal"
+	"github.com/darlean-io/darlean.go/base/services/actorregistry"
+	"github.com/darlean-io/darlean.go/core/backoff"
+	"github.com/darlean-io/darlean.go/core/invoke"
+	"github.com/darlean-io/darlean.go/core/inward"
+	"github.com/darlean-io/darlean.go/core/natstransport"
+	"github.com/darlean-io/darlean.go/core/normalized"
+	"github.com/darlean-io/darlean.go/core/remoteactorregistry"
+	"github.com/darlean-io/darlean.go/core/transporthandler"
+	"github.com/darlean-io/darlean.go/utils/variant"
 )
 
 type EchoActor_Echo struct {
@@ -75,7 +77,7 @@ func main() {
 	time.Sleep(time.Second)
 
 	disp := inward.NewDispatcher(registry2)
-	container := inward.NewStandardActorContainer(false)
+	container := inward.NewStandardActorContainer(false, map[normalized.ActionName]inward.ActionDef{}, nil, nil)
 	disp.RegisterActorType(inward.ActorInfo{
 		ActorType: "goechoactor",
 		Container: container,

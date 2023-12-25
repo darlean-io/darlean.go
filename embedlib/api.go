@@ -12,14 +12,15 @@ package main
 import "C"
 
 import (
-	"core/backoff"
-	"core/invoke"
-	"core/natstransport"
-	"core/remoteactorregistry"
-	"core/transporthandler"
-	"core/variant"
 	"fmt"
 	"time"
+
+	"github.com/darlean-io/darlean.go/core/backoff"
+	"github.com/darlean-io/darlean.go/core/invoke"
+	"github.com/darlean-io/darlean.go/core/natstransport"
+	"github.com/darlean-io/darlean.go/core/remoteactorregistry"
+	"github.com/darlean-io/darlean.go/core/transporthandler"
+	"github.com/darlean-io/darlean.go/utils/variant"
 )
 
 type Api struct {

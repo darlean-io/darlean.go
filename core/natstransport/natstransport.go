@@ -2,10 +2,11 @@ package natstransport
 
 import (
 	"bytes"
-	"core/wire"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/darlean-io/darlean.go/core/wire"
 
 	"github.com/nats-io/nats.go"
 )

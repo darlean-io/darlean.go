@@ -1,8 +1,8 @@
 package jsonvariant
 
 import (
-	"core/jsonbinary"
-	"core/variant"
+	"github.com/darlean-io/darlean.go/utils/jsonbinary"
+	"github.com/darlean-io/darlean.go/utils/variant"
 )
 
 type jsonData []byte

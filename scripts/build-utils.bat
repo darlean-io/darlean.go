@@ -1,0 +1,1 @@
+go -C utils/internal/main build

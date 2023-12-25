@@ -1,11 +1,12 @@
 package transporthandler
 
 import (
-	"core"
-	"core/invoke"
-	"core/wire"
 	"fmt"
 	"sync"
+
+	"github.com/darlean-io/darlean.go/core"
+	"github.com/darlean-io/darlean.go/core/invoke"
+	"github.com/darlean-io/darlean.go/core/wire"
 
 	"github.com/google/uuid"
 )

@@ -3,14 +3,14 @@ package jsonbinary
 import (
 	"bytes"
 	"context"
-	"core/binary"
-	"core/variant"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/darlean-io/darlean.go/utils/binary"
+	"github.com/darlean-io/darlean.go/utils/variant"
 	"github.com/goccy/go-json"
 )
 

@@ -1,10 +1,12 @@
 package remoteactorregistry
 
 import (
-	"core/invoke"
-	"core/services/actorregistry"
 	"fmt"
 	"time"
+
+	"github.com/darlean-io/darlean.go/core/invoke"
+
+	"github.com/darlean-io/darlean.go/base/services/actorregistry"
 )
 
 func Push(invoker invoke.TransportInvoker, hosts []string, request PushRequest) error {

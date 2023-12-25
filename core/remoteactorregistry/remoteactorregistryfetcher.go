@@ -1,11 +1,14 @@
 package remoteactorregistry
 
 import (
-	"core/invoke"
-	"core/services/actorregistry"
-	"core/variant"
 	"sync"
 	"time"
+
+	"github.com/darlean-io/darlean.go/core/invoke"
+
+	"github.com/darlean-io/darlean.go/utils/variant"
+
+	"github.com/darlean-io/darlean.go/base/services/actorregistry"
 )
 
 func Obtain(invoker invoke.TransportInvoker, hosts []string) (*ObtainResponse, error) {
