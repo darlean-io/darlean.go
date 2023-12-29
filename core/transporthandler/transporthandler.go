@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/darlean-io/darlean.go/base/invoker"
 	"github.com/darlean-io/darlean.go/core"
 	"github.com/darlean-io/darlean.go/core/invoke"
 	"github.com/darlean-io/darlean.go/core/wire"
@@ -12,7 +13,7 @@ import (
 )
 
 type pendingCall struct {
-	finished chan<- *invoke.InvokeResponse
+	finished chan<- *invoker.Response
 }
 
 type TransportHandler struct {
@@ -60,20 +61,20 @@ func (invoker *TransportHandler) Listen() {
 	}
 }
 
-func (invoker *TransportHandler) handleReturnMessage(tags *wire.Tags) {
-	invoker.mutex.Lock()
-	call, found := invoker.pendingCalls[tags.Remotecall_Id]
+func (handler *TransportHandler) handleReturnMessage(tags *wire.Tags) {
+	handler.mutex.Lock()
+	call, found := handler.pendingCalls[tags.Remotecall_Id]
 	if found {
-		delete(invoker.pendingCalls, tags.Remotecall_Id)
+		delete(handler.pendingCalls, tags.Remotecall_Id)
 	}
-	invoker.mutex.Unlock()
+	handler.mutex.Unlock()
 
 	if !found {
 		fmt.Println("Received value without matching call")
 		return
 	}
 
-	call.finished <- &invoke.InvokeResponse{
+	call.finished <- &invoker.Response{
 		Value: tags.Value,
 		Error: tags.Error,
 	}
@@ -92,12 +93,12 @@ func New(transport core.Transport, dispatcher InwardCallDispatcher, appId string
 	return &invoker
 }
 
-func (invoker *TransportHandler) Invoke(req *invoke.TransportHandlerInvokeRequest) *invoke.InvokeResponse {
+func (handler *TransportHandler) Invoke(req *invoke.TransportHandlerInvokeRequest) *invoker.Response {
 	id := uuid.NewString()
 
 	tags := wire.Tags{}
 	tags.Transport_Receiver = req.Receiver
-	tags.Transport_Return = invoker.appId
+	tags.Transport_Return = handler.appId
 	tags.Remotecall_Id = id
 	tags.Remotecall_Kind = "call"
 	tags.ActorType = req.ActorType
@@ -105,15 +106,15 @@ func (invoker *TransportHandler) Invoke(req *invoke.TransportHandlerInvokeReques
 	tags.ActionName = req.ActionName
 	tags.Arguments = req.Parameters
 
-	response := make(chan *invoke.InvokeResponse)
+	response := make(chan *invoker.Response)
 
-	invoker.mutex.Lock()
-	invoker.pendingCalls[id] = pendingCall{
+	handler.mutex.Lock()
+	handler.pendingCalls[id] = pendingCall{
 		finished: response,
 	}
-	invoker.mutex.Unlock()
+	handler.mutex.Unlock()
 
-	err := invoker.transport.Send(tags)
+	err := handler.transport.Send(tags)
 	if err != nil {
 		panic(err)
 	}

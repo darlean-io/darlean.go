@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/darlean-io/darlean.go/base"
+	"github.com/darlean-io/darlean.go/base/invoker"
 
 	"github.com/darlean-io/darlean.go/core/backoff"
 
@@ -29,7 +30,7 @@ func NewDynamicInvoker(transportInvoker TransportInvoker, backoff backoff.BackOf
 	}
 }
 
-func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) (any, *base.ActionError) {
+func (invoker *DynamicInvoker) Invoke(request *invoker.Request) (any, *base.ActionError) {
 	var bo backoff.BackOffSession
 	useCache := true
 	cacheInvalidated := false
@@ -95,8 +96,8 @@ func (invoker *DynamicInvoker) Invoke(request *InvokeRequest) (any, *base.Action
 
 		if receiver != nil {
 			staticRequest := TransportHandlerInvokeRequest{
-				InvokeRequest: *request,
-				Receiver:      *receiver,
+				Request:  *request,
+				Receiver: *receiver,
 			}
 			staticRequest.Lazy = lazy
 			lazy = false

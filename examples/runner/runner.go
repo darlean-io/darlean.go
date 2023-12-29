@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/darlean-io/darlean.go/base/invoker"
 	"github.com/darlean-io/darlean.go/base/portal"
 	"github.com/darlean-io/darlean.go/base/services/actorregistry"
+	"github.com/darlean-io/darlean.go/base/typedportal"
 	"github.com/darlean-io/darlean.go/core/backoff"
 	"github.com/darlean-io/darlean.go/core/invoke"
 	"github.com/darlean-io/darlean.go/core/inward"
@@ -35,15 +37,15 @@ type EchoActor struct {
 	Greet EchoActor_Greet
 }
 
-func toLowerCase(invoker *invoke.DynamicInvoker, input string) {
-	req := invoke.InvokeRequest{
+func toLowerCase(inv *invoke.DynamicInvoker, input string) {
+	req := invoker.Request{
 		ActorType:  "echoactor",
 		ActorId:    []string{"A"},
 		ActionName: "echo",
 		Parameters: []any{input},
 	}
 
-	value, err := invoker.Invoke(&req)
+	value, err := inv.Invoke(&req)
 	if err != nil {
 		fmt.Printf("Error for %v: %v\n", input, err)
 		panic(err)
@@ -85,9 +87,9 @@ func main() {
 	})
 
 	p := portal.New(&invoker)
-	echoPortal := portal.ForType[EchoActor](p)
+	echoPortal := typedportal.ForSignature[EchoActor](p)
 	actor := echoPortal.Obtain([]string{"abc"})
-	call := actor.Call().Echo
+	call := actor.NewCall().Echo
 	call.A0 = "Hello"
 	call.A2 = 42
 	err = actor.Invoke(&call)

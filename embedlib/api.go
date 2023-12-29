@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/darlean-io/darlean.go/base/invoker"
 	"github.com/darlean-io/darlean.go/core/backoff"
 	"github.com/darlean-io/darlean.go/core/invoke"
 	"github.com/darlean-io/darlean.go/core/natstransport"
@@ -55,7 +56,7 @@ func (api Api) Stop() {
 
 type invokeCb func(n string)
 
-func (api Api) Invoke(request *invoke.InvokeRequest, goCb invokeCb) {
+func (api Api) Invoke(request *invoker.Request, goCb invokeCb) {
 	result, err := api.Invoker.Invoke(request)
 
 	if err != nil {

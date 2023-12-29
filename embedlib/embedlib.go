@@ -8,7 +8,7 @@ import "C"
 import (
 	"strings"
 
-	"github.com/darlean-io/darlean.go/core/invoke"
+	"github.com/darlean-io/darlean.go/base/invoker"
 )
 
 var apiInstance *Api
@@ -32,7 +32,7 @@ func Invoke(cb C.invoke_cb, actorType string, actorId []string, actionName strin
 	goCb := func(bufhandle string) {
 		C.makeCallback(bufhandle, cb)
 	}
-	request := invoke.InvokeRequest{
+	request := invoker.Request{
 		ActorType:  actorType,
 		ActorId:    actorId, //strings.Split(actorId, ","),
 		ActionName: actionName,

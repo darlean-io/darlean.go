@@ -6,22 +6,23 @@ import (
 
 	"github.com/darlean-io/darlean.go/core/invoke"
 
+	"github.com/darlean-io/darlean.go/base/invoker"
 	"github.com/darlean-io/darlean.go/base/services/actorregistry"
 )
 
-func Push(invoker invoke.TransportInvoker, hosts []string, request PushRequest) error {
+func Push(inv invoke.TransportInvoker, hosts []string, request PushRequest) error {
 	for _, host := range hosts {
-		fmt.Sprintf("Pushing to %v", host)
+		fmt.Printf("Pushing to %v", host)
 		req := invoke.TransportHandlerInvokeRequest{
 			Receiver: host,
-			InvokeRequest: invoke.InvokeRequest{
+			Request: invoker.Request{
 				ActorType:  SERVICE,
 				ActorId:    []string{},
 				ActionName: ACTION_PUSH,
 				Parameters: []any{request},
 			},
 		}
-		resp := invoker.Invoke(&req)
+		resp := inv.Invoke(&req)
 		if resp.Error == nil {
 			return nil
 		}

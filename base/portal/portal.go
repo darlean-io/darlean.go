@@ -1,84 +1,24 @@
 package portal
 
 import (
-	"reflect"
-	"strings"
-
-	"github.com/darlean-io/darlean.go/core/invoke"
-
-	"github.com/darlean-io/darlean.go/utils/variant"
+	"github.com/darlean-io/darlean.go/base/invoker"
 )
 
-type PortalActor[T any] struct {
-	Base Portal
-	Id   []string
-}
-
-type ActorPortal[T any] interface {
-	Obtain(id []string) PortalActor[T]
-}
-
+// Portal ressembles a portal that can be used to invoke remote actors of any type or id.
+// An instance of a portal can be created by means of [portal.New].
 type Portal interface {
-	Invoker() *invoke.DynamicInvoker
+	invoker.Invoker
 }
 
-type SimpleActorPortal[T any] struct {
-	base Portal
+// StandardPortal is the standard implementation of a Portal. Can be constructed using [portal.New].
+type invokerPortal struct {
+	invoker.Invoker
 }
 
-type SimplePortal struct {
-	invoker *invoke.DynamicInvoker
-}
-
-func (portal SimplePortal) Invoker() *invoke.DynamicInvoker {
-	return portal.invoker
-}
-
-func New(invoker *invoke.DynamicInvoker) Portal {
-	return SimplePortal{
-		invoker: invoker,
+// New creates and returns a new Portal for the provided invoker. The portal uses
+// the invoker to make actual calls to actors.
+func New(invoker invoker.Invoker) Portal {
+	return invokerPortal{
+		Invoker: invoker,
 	}
-}
-
-func ForType[T any](base Portal) ActorPortal[T] {
-	p := SimpleActorPortal[T]{
-		base: base,
-	}
-	return p
-}
-
-func (portal SimpleActorPortal[T]) Obtain(id []string) PortalActor[T] {
-	return PortalActor[T]{
-		Base: portal.base,
-		Id:   id,
-	}
-}
-
-func (rec PortalActor[T]) Invoke(input any) error {
-	var a T
-	var tp = reflect.TypeOf(a)
-	var inputtp = reflect.ValueOf(input).Elem().Type()
-	var inputtps = strings.Split(inputtp.Name(), "_")
-	var action = inputtps[len(inputtps)-1]
-
-	req := invoke.InvokeRequest{
-		ActorType:  strings.ToLower(tp.Name()),
-		ActorId:    rec.Id,
-		ActionName: strings.ToLower(action),
-	}
-	a0 := reflect.ValueOf(input).Elem().FieldByName("A0")
-	a0value := a0.Interface()
-	req.Parameters = []any{a0value}
-	resp, err := rec.Base.Invoker().Invoke(&req)
-	if err != nil {
-		return err
-	}
-	res := reflect.ValueOf(input)
-	res = res.Elem().FieldByName("Result")
-	return variant.Assign(resp, &res)
-}
-
-func (rec PortalActor[T]) Call() T {
-	var t T
-	return t
 }

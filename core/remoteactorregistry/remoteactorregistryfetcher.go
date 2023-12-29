@@ -8,21 +8,22 @@ import (
 
 	"github.com/darlean-io/darlean.go/utils/variant"
 
+	"github.com/darlean-io/darlean.go/base/invoker"
 	"github.com/darlean-io/darlean.go/base/services/actorregistry"
 )
 
-func Obtain(invoker invoke.TransportInvoker, hosts []string) (*ObtainResponse, error) {
+func Obtain(inv invoke.TransportInvoker, hosts []string) (*ObtainResponse, error) {
 	for _, host := range hosts {
 		req := invoke.TransportHandlerInvokeRequest{
 			Receiver: host,
-			InvokeRequest: invoke.InvokeRequest{
+			Request: invoker.Request{
 				ActorType:  SERVICE,
 				ActorId:    []string{},
 				ActionName: ACTION_OBTAIN,
 				Parameters: []any{ObtainRequest{}},
 			},
 		}
-		resp := invoker.Invoke(&req)
+		resp := inv.Invoke(&req)
 		if resp.Value != nil {
 			var value ObtainResponse
 			err := variant.Assign(resp.Value, &value)
