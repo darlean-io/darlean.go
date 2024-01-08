@@ -1,7 +1,6 @@
 package remoteactorregistry
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/darlean-io/darlean.go/core/invoke"
@@ -12,7 +11,7 @@ import (
 
 func Push(inv invoke.TransportInvoker, hosts []string, request PushRequest) error {
 	for _, host := range hosts {
-		fmt.Printf("Pushing to %v", host)
+		// fmt.Printf("Pushing to %v: %+v\n", host, request)
 		req := invoke.TransportHandlerInvokeRequest{
 			Receiver: host,
 			Request: invoker.Request{
@@ -87,6 +86,10 @@ func (registry *RemoteActorRegistryPusher) Set(info map[string]actorregistry.Act
 	}()
 }
 
+func (registry *RemoteActorRegistryPusher) Start() {
+	go registry.loop(registry.stop, registry.force, 10*time.Second)
+}
+
 func (registry *RemoteActorRegistryPusher) Stop() {
 	registry.stop <- true
 }
@@ -102,8 +105,6 @@ func NewPusher(hosts []string, appId string, invoker invoke.TransportInvoker) *R
 		stop:    stop,
 		force:   force,
 	}
-
-	go registry.loop(stop, force, 10*time.Second)
 
 	return &registry
 }

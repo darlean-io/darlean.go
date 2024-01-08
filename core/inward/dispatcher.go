@@ -79,5 +79,6 @@ func (dispatcher Dispatcher) TriggerBroadcast() {
 func NewDispatcher(registryPusher actorregistry.ActorRegistryPusher) *Dispatcher {
 	return &Dispatcher{
 		registryPusher: registryPusher,
+		actorTypes:     make(map[normalized.ActorType]ActorInfo),
 	}
 }

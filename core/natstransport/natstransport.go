@@ -71,6 +71,7 @@ func (transport *NatsTransport) listen(input chan *nats.Msg, output chan *wire.T
 	defer close(output)
 
 	for msg := range input {
+		msg.Ack()
 		buf := bytes.NewBuffer(msg.Data)
 		lengthsString, err := buf.ReadString('\n')
 		if err != nil {

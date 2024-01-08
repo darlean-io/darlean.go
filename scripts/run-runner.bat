@@ -1,1 +1,1 @@
-go -C ./runner run runner.go
+go -C ./examples/runner run runner.go

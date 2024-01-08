@@ -122,6 +122,10 @@ func (registry *RemoteActorRegistryFetcher) Get(actorType string) *actorregistry
 	return &info
 }
 
+func (registry *RemoteActorRegistryFetcher) Start() {
+	go registry.loop(registry.stop, registry.force, 10*time.Second)
+}
+
 func (registry *RemoteActorRegistryFetcher) Stop() {
 	registry.stop <- true
 }
@@ -141,8 +145,6 @@ func NewFetcher(hosts []string, invoker invoke.TransportInvoker) *RemoteActorReg
 		stop:    stop,
 		force:   force,
 	}
-
-	go registry.loop(stop, force, 10*time.Second)
 
 	return &registry
 }

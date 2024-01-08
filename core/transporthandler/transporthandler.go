@@ -16,12 +16,16 @@ type pendingCall struct {
 	finished chan<- *invoker.Response
 }
 
+/*
+TransportHandler handles the incoming and outgoing calls to a transport. Implements [TransportInvoker].
+*/
 type TransportHandler struct {
-	appId        string
-	transport    core.Transport
-	pendingCalls map[string]pendingCall
-	mutex        sync.Mutex
-	dispatcher   InwardCallDispatcher
+	appId             string
+	transport         core.Transport
+	pendingCalls      map[string]pendingCall
+	mutex             sync.Mutex
+	dispatcherFactory func() InwardCallDispatcher
+	dispatcher        InwardCallDispatcher
 }
 
 type InwardCallDispatcher interface {
@@ -29,6 +33,10 @@ type InwardCallDispatcher interface {
 }
 
 func (invoker *TransportHandler) Listen() {
+	if invoker.dispatcherFactory != nil {
+		invoker.dispatcher = invoker.dispatcherFactory()
+	}
+
 	for tags := range invoker.transport.GetInputChannel() {
 		switch tags.Remotecall_Kind {
 		case "call":
@@ -50,6 +58,7 @@ func (invoker *TransportHandler) Listen() {
 						},
 						ActorCallResponse: *response,
 					}
+					// fmt.Printf("Sending %+v\n", responseMsg)
 					invoker.transport.Send(responseMsg)
 				})
 			}()
@@ -74,25 +83,30 @@ func (handler *TransportHandler) handleReturnMessage(tags *wire.Tags) {
 		return
 	}
 
+	// fmt.Printf("TransportHandler received %+v\n", tags)
+
 	call.finished <- &invoker.Response{
 		Value: tags.Value,
 		Error: tags.Error,
 	}
 }
 
-func New(transport core.Transport, dispatcher InwardCallDispatcher, appId string) *TransportHandler {
+func New(transport core.Transport, dispatcherFactory func() InwardCallDispatcher, appId string) *TransportHandler {
 	invoker := TransportHandler{
-		appId:        appId,
-		transport:    transport,
-		dispatcher:   dispatcher,
-		pendingCalls: make(map[string]pendingCall),
+		appId:             appId,
+		transport:         transport,
+		dispatcherFactory: dispatcherFactory,
+		pendingCalls:      make(map[string]pendingCall),
 	}
-
-	go invoker.Listen()
 
 	return &invoker
 }
 
+func (handler *TransportHandler) Start() {
+	go handler.Listen()
+}
+
+// Invoke invokes a remote action and satisfies [TransportInvoker.Invoke]
 func (handler *TransportHandler) Invoke(req *invoke.TransportHandlerInvokeRequest) *invoker.Response {
 	id := uuid.NewString()
 
@@ -116,6 +130,7 @@ func (handler *TransportHandler) Invoke(req *invoke.TransportHandlerInvokeReques
 
 	err := handler.transport.Send(tags)
 	if err != nil {
+		fmt.Printf("Nats error to %s for %s.%s: %+v\n", req.Receiver, req.ActorType, req.ActionName, err)
 		panic(err)
 	}
 

@@ -1,3 +1,8 @@
+/*
+Package typedportal provides an interface to and an implementation of a portal that
+provides access to an actor of a specific type.
+*/
+
 package typedportal
 
 import (
@@ -7,6 +12,7 @@ import (
 
 // Interface to a portal that returns proxies of a specific actor type.
 type Portal[ActorSig baseportal.ActorSignature] interface {
+	// Returns a new proxy for the provided id.
 	Obtain(id []string) *portal.ActorProxy[ActorSig]
 }
 
@@ -15,6 +21,7 @@ type typedPortal[ActorSig baseportal.ActorSignature] struct {
 	base baseportal.Portal
 }
 
+// Obtain satisfies [typedportal.Portal].
 func (portal typedPortal[ActorSig]) Obtain(id []string) *portal.ActorProxy[ActorSig] {
 	return &baseportal.ActorProxy[ActorSig]{
 		Base: portal.base,

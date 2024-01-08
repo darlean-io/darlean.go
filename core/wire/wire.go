@@ -99,8 +99,8 @@ func Serialize(buf *bytes.Buffer, tags Tags) error {
 	}
 
 	// Call response
-	fastproto.WriteVariant(buf, nil)
-	fastproto.WriteJson(buf, nil)
+	fastproto.WriteVariant(buf, tags.ActorCallResponse.Value)
+	fastproto.WriteJson(buf, tags.ActorCallResponse.Error)
 	return nil
 }
 

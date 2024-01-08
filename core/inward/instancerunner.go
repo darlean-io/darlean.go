@@ -117,6 +117,7 @@ func (runner *DefaultInstanceRunner) Invoke(call *wire.ActorCallRequest, onFinis
 	actionDef, has := runner.actionDefs[normalized.NormalizeActionName(call.ActionName)]
 	if !has {
 		onFinished(nil, errors.New(ERROR_UNKNOWN_ACTION))
+		return
 	}
 
 	runner.onceLoop.Do(func() {

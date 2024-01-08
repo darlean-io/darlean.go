@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"strconv"
 
+	"github.com/darlean-io/darlean.go/utils/binary"
 	"github.com/darlean-io/darlean.go/utils/jsonbinary"
 	"github.com/darlean-io/darlean.go/utils/jsonvariant"
+	"github.com/darlean-io/darlean.go/utils/variant"
 
 	pool "github.com/libp2p/go-buffer-pool"
 )
@@ -115,7 +117,7 @@ func WriteJson(buf *bytes.Buffer, value any) error {
 	return nil
 }
 
-func ReadJson(buf *bytes.Buffer) (any, error) {
+func ReadJson(buf *bytes.Buffer) (variant.Assignable, error) {
 	data, err := ReadBinary(buf)
 	if err != nil {
 		return nil, err
@@ -151,12 +153,24 @@ func WriteVariant(buf *bytes.Buffer, value any) error {
 		WriteChar(buf, CHAR_CODE_BUFFER)
 		b := v.Bytes()
 		return WriteBinary(buf, &b)
+	case []byte:
+		WriteChar(buf, CHAR_CODE_BUFFER)
+		return WriteBinary(buf, &v)
+	case binary.Binary:
+		WriteChar(buf, CHAR_CODE_BUFFER)
+		b := v.Bytes()
+		return WriteBinary(buf, &b)
 	default:
 		WriteChar(buf, CHAR_CODE_JSON)
 		return WriteJson(buf, v)
 	}
 }
 
+/*
+ReadVariant reads a value from buf that was previously stored via [WriteVariant].
+
+Returns nil, a string, true, false, a []byte or a [variant.Assignable].
+*/
 func ReadVariant(buf *bytes.Buffer) (any, error) {
 	kind, err := ReadChar(buf)
 	if err != nil {

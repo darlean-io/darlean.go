@@ -11,6 +11,9 @@ type TransportHandlerInvokeRequest struct {
 	Receiver string
 }
 
+/*
+TransportInvoker makes it possible to invoke a request to one specific transport receiver.
+*/
 type TransportInvoker interface {
 	Invoke(req *TransportHandlerInvokeRequest) *invoker.Response
 }
