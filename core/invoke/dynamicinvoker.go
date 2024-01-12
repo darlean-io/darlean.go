@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/darlean-io/darlean.go/base"
+	"github.com/darlean-io/darlean.go/base/actionerror"
 	"github.com/darlean-io/darlean.go/base/invoker"
 
 	"github.com/darlean-io/darlean.go/core/backoff"
@@ -30,13 +30,13 @@ func NewDynamicInvoker(transportInvoker TransportInvoker, backoff backoff.BackOf
 	}
 }
 
-func (invoker *DynamicInvoker) Invoke(request *invoker.Request) (any, *base.ActionError) {
+func (invoker *DynamicInvoker) Invoke(request *invoker.Request) (any, *actionerror.Error) {
 	var bo backoff.BackOffSession
 	useCache := true
 	cacheInvalidated := false
 	lazy := false
 	suggestions := []string{}
-	causes := []*base.ActionError{}
+	causes := []*actionerror.Error{}
 	var cachePreparedKey [8]byte
 	triesLeft := 10
 	for {
@@ -105,21 +105,21 @@ func (invoker *DynamicInvoker) Invoke(request *invoker.Request) (any, *base.Acti
 			response := invoker.staticInvoker.Invoke(&staticRequest)
 
 			if response.Error != nil {
-				var error base.ActionError
-				err := variant.Assign(response.Error, &error)
+				var err2 actionerror.Error
+				err := variant.Assign(response.Error, &err2)
 				if err != nil {
-					causes = append(causes, base.NewFrameworkError(base.ActionErrorOptions{
+					causes = append(causes, actionerror.NewFrameworkError(actionerror.Options{
 						Code:     "ERROR_PARSE_ERROR",
 						Template: "Action returned an error, but unable to parse the error",
 					}))
 				}
-				if error.Kind != base.ERROR_KIND_FRAMEWORK {
-					return nil, &error
+				if err2.Kind != actionerror.ERROR_KIND_FRAMEWORK {
+					return nil, &err2
 				} else {
-					causes = append(causes, &error)
+					causes = append(causes, &err2)
 				}
 
-				redirect, present := error.Parameters[FRAMEWORK_ERROR_PARAMETER_REDIRECT_DESTINATION]
+				redirect, present := err2.Parameters[FRAMEWORK_ERROR_PARAMETER_REDIRECT_DESTINATION]
 				if present {
 					var redirects []string
 					err := variant.Assign(redirect, &redirects)
@@ -137,7 +137,7 @@ func (invoker *DynamicInvoker) Invoke(request *invoker.Request) (any, *base.Acti
 			}
 			return response.Value, nil
 		} else {
-			causes = append(causes, base.NewFrameworkError(base.ActionErrorOptions{
+			causes = append(causes, actionerror.NewFrameworkError(actionerror.Options{
 				Code:     FRAMEWORK_ERROR_NO_RECEIVERS_AVAILABLE,
 				Template: "No receivers available at [RequestTime] to process an action on an instance of [ActorType]",
 				Parameters: map[string]any{
@@ -165,7 +165,7 @@ func (invoker *DynamicInvoker) Invoke(request *invoker.Request) (any, *base.Acti
 		cause = causes[0].Message
 	}
 
-	return nil, base.NewFrameworkError(base.ActionErrorOptions{
+	return nil, actionerror.NewFrameworkError(actionerror.Options{
 		Code:     FRAMEWORK_ERROR_INVOKE_ERROR,
 		Template: "Failed to invoke remote method [ActionName] on an instance of [ActorType]: [FirstMessage]",
 		Parameters: map[string]any{

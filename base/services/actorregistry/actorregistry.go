@@ -1,3 +1,6 @@
+/*
+Package actorregistry contains the data types for interfacing with an actor registry.
+*/
 package actorregistry
 
 type ApplicationInfo struct {

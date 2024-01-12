@@ -5,12 +5,13 @@ import (
 	"strings"
 
 	"github.com/darlean-io/darlean.go/base/invoker"
+	"github.com/darlean-io/darlean.go/base/signature"
 	"github.com/darlean-io/darlean.go/utils/variant"
 )
 
 // ActorProxy is a proxy to a remote actor than can be used to invoke methods on a remote actor.
 // ActorSig must be a valid [portal.ActorSignature].
-type ActorProxy[ActorSig ActorSignature] struct {
+type ActorProxy[ActorSig signature.Actor] struct {
 	// Base is the portal to be used to invoke the remote actor.
 	Base Portal
 	// Id is the id of the remote actor to which this proxy points.
@@ -22,7 +23,7 @@ type ActorProxy[ActorSig ActorSignature] struct {
 // must be properly set.
 // After the invocation, the `Result` field of the action contains the result (when no error occurred). Otherwise,
 // the error is returned.
-func (proxy ActorProxy[ActorSig]) Invoke(action ActionSignature) error {
+func (proxy ActorProxy[ActorSig]) Invoke(action signature.Action) error {
 	var a ActorSig
 	var tp = reflect.TypeOf(a)
 	var inputtp = reflect.ValueOf(action).Elem().Type()
