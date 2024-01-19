@@ -45,7 +45,7 @@ func (invoker *TransportHandler) Listen() {
 				continue
 			}
 
-			go func() {
+			go func(tags *wire.TagsIn) {
 				invoker.dispatcher.Dispatch(&tags.ActorCallRequestIn, func(response *wire.ActorCallResponseOut) {
 					responseMsg := wire.TagsOut{
 						TransportTags: wire.TransportTags{
@@ -60,7 +60,7 @@ func (invoker *TransportHandler) Listen() {
 					}
 					invoker.transport.Send(responseMsg)
 				})
-			}()
+			}(tags)
 
 			continue
 		case "return":

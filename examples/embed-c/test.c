@@ -15,7 +15,7 @@ void onInvoked(GoString s) {
 int main(void) {
     char appId[] = "client";
     char nats[] = "localhost:4500";
-    char nodes[] = "server01";
+    char nodes[] = "server";
 
     GoString goAppId = {p: appId, n: sizeof(appId)-1};
     GoString goNats = {p: nats, n: sizeof(nats)-1};

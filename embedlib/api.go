@@ -39,7 +39,7 @@ func NewApi(appId string, natsAddr string, hosts []string) *Api {
 	staticInvoker := transporthandler.New(transport, nil, appId)
 	registry := remoteactorregistry.NewFetcher(hosts, staticInvoker)
 
-	backoff := backoff.Exponential(10*time.Millisecond, 8, 4.0, 0.25)
+	backoff := backoff.Exponential(1*time.Millisecond, 6, 4.0, 0.25)
 	invoker := invoke.NewDynamicInvoker(staticInvoker, backoff, registry)
 
 	return &Api{
@@ -60,7 +60,8 @@ func (api Api) Invoke(request *invoker.Request, goCb invokeCb) {
 	result, err := api.Invoker.Invoke(request)
 
 	if err != nil {
-		goCb("invoke: " + err.Error())
+		goCb("error: " + err.Error())
+		return
 	}
 
 	// TODO encode variant

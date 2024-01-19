@@ -93,6 +93,15 @@ type GoActor struct {
 	Echo GoActor_Echo
 }
 
+type UnexistingActor_Echo struct {
+	A0_Input string
+	Result   string
+}
+
+type UnexistingActor struct {
+	Echo GoActor_Echo
+}
+
 func main() {
 
 	const OUR_APP_ID = "client"
@@ -113,7 +122,7 @@ func main() {
 	registryPusher := remoteactorregistry.NewPusher(HOSTS, OUR_APP_ID, transportHandler)
 	disp = inward.NewDispatcher(registryPusher)
 
-	backoff := backoff.Exponential(10*time.Millisecond, 8, 4.0, 0.25)
+	backoff := backoff.Exponential(1*time.Millisecond, 6, 4.0, 0.25)
 	invoker := invoke.NewDynamicInvoker(transportHandler, backoff, registryFetcher)
 
 	transportHandler.Start()
@@ -138,6 +147,7 @@ func main() {
 
 	p := portal.New(&invoker)
 
+	// Invoke typescript actor
 	tsPortal := typedportal.ForSignature[TypescriptActor](p)
 	tsActor := tsPortal.Obtain([]string{})
 	tsEcho := tsActor.NewCall().Echo
@@ -145,12 +155,20 @@ func main() {
 	tsError := tsActor.Invoke(&tsEcho)
 	fmt.Printf("Received from typescript actor: %v / %v (expected: \"hello\")\n", tsEcho.Result, tsError)
 
+	// Invoke go actor
 	goPortal := typedportal.ForSignature[GoActor](p)
 	goActor := goPortal.Obtain([]string{})
 	goEcho := goActor.NewCall().Echo
 	goEcho.A0_Input = "Foo"
 	goError := goActor.Invoke(&goEcho)
 	fmt.Printf("Received from go actor: %v / %+v (expected: \"FOO\")\n", goEcho.Result, goError)
+
+	// Invoke unexisting actor type
+	unexistingPortal := typedportal.ForSignature[UnexistingActor](p)
+	unexistingActor := unexistingPortal.Obtain([]string{})
+	unexistingEcho := unexistingActor.NewCall().Echo
+	unexistingError := unexistingActor.Invoke(&unexistingEcho)
+	fmt.Printf("Received from unexisting actor: %v / %+v (expected: \"<error>\")\n", unexistingEcho.Result, unexistingError)
 
 	time.Sleep(time.Second)
 	go toLowerCase(&invoker, "Hello")
