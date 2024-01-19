@@ -1,0 +1,1 @@
+go test github.com/darlean-io/darlean.go/core/... %1

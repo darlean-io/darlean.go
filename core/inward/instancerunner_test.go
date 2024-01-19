@@ -18,7 +18,7 @@ func TestInstanceRunner_Exclusive(t *testing.T) {
 
 	handleResult := func(result any, err *actionerror.Error) {
 		if err != nil {
-			results = append(results, fmt.Sprintf("ERR:%v", err))
+			results = append(results, fmt.Sprintf("ERR:%v", err.Code))
 		} else {
 			results = append(results, fmt.Sprintf("%v", result))
 		}
@@ -60,7 +60,7 @@ func TestInstanceRunner_Shared(t *testing.T) {
 
 	handleResult := func(result any, err *actionerror.Error) {
 		if err != nil {
-			results = append(results, fmt.Sprintf("ERR:%v", err))
+			results = append(results, fmt.Sprintf("ERR:%v", err.Code))
 		} else {
 			results = append(results, fmt.Sprintf("%v", result))
 		}
@@ -116,7 +116,7 @@ func TestInstanceRunner_None(t *testing.T) {
 
 	handleResult := func(result any, err *actionerror.Error) {
 		if err != nil {
-			results = append(results, fmt.Sprintf("ERR:%v", err))
+			results = append(results, fmt.Sprintf("ERR:%v", err.Code))
 		} else {
 			results = append(results, fmt.Sprintf("%v", result))
 		}

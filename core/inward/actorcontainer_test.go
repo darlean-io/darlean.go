@@ -29,7 +29,7 @@ func TestActorContainer(t *testing.T) {
 
 	handleResult := func(result any, err *actionerror.Error) {
 		if err != nil {
-			results = append(results, fmt.Sprintf("ERR:%v", err))
+			results = append(results, fmt.Sprintf("ERR:%v", err.Code))
 		} else {
 			results = append(results, fmt.Sprintf("%v", result))
 		}
