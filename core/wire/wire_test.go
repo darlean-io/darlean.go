@@ -17,7 +17,7 @@ type someStruct struct {
 }
 
 func TestActorContainer(t *testing.T) {
-	tags := Tags{
+	tags := TagsOut{
 		TransportTags: TransportTags{
 			Transport_Receiver: "Receiver",
 			Transport_Return:   "Return",
@@ -26,14 +26,14 @@ func TestActorContainer(t *testing.T) {
 			Remotecall_Kind: "call",
 			Remotecall_Id:   "12345",
 		},
-		ActorCallRequest: ActorCallRequest{
+		ActorCallRequestOut: ActorCallRequestOut{
 			Lazy:       true,
 			ActorType:  "Type",
 			ActionName: "Action",
 			ActorId:    []string{"a", "b"},
 			Arguments:  []any{"a", 1, true, map[string]int{"five": 5, "nine": 9}, binary.FromBytes([]byte("HELLO"))},
 		},
-		ActorCallResponse: ActorCallResponse{
+		ActorCallResponseOut: ActorCallResponseOut{
 			Error: "Error",
 			Value: "Value",
 		},
@@ -41,7 +41,7 @@ func TestActorContainer(t *testing.T) {
 
 	var buf bytes.Buffer
 	Serialize(&buf, tags)
-	var tags2 Tags
+	var tags2 TagsIn
 	Deserialize(&buf, &tags2)
 
 	checks.Equal(t, "Receiver", tags2.Transport_Receiver, "Transport Receiver")
@@ -76,11 +76,11 @@ func TestActorContainer(t *testing.T) {
 
 func TestActorContainerWithStructs(t *testing.T) {
 	aStruct := someStruct{AString: "Foo", AInt: 42, AFloat: 3.1, ABool: true}
-	tags := Tags{
-		ActorCallRequest: ActorCallRequest{
+	tags := TagsOut{
+		ActorCallRequestOut: ActorCallRequestOut{
 			Arguments: []any{aStruct},
 		},
-		ActorCallResponse: ActorCallResponse{
+		ActorCallResponseOut: ActorCallResponseOut{
 			Error: aStruct,
 			Value: aStruct,
 		},
@@ -88,7 +88,7 @@ func TestActorContainerWithStructs(t *testing.T) {
 
 	var buf bytes.Buffer
 	Serialize(&buf, tags)
-	var tags2 Tags
+	var tags2 TagsIn
 	Deserialize(&buf, &tags2)
 
 	checks.Equal(t, "", tags2.Transport_Receiver, "Transport Receiver")

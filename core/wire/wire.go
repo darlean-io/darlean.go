@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/darlean-io/darlean.go/utils/fastproto"
+	"github.com/darlean-io/darlean.go/utils/variant"
 )
 
 type TransportTags struct {
@@ -18,7 +19,20 @@ type RemoteCallTags struct {
 	Remotecall_Id   string
 }
 
-type ActorCallRequest struct {
+type ActorCallRequestIn struct {
+	Lazy       bool
+	ActorType  string
+	ActorId    []string
+	ActionName string
+	Arguments  []variant.Assignable
+}
+
+type ActorCallResponseIn struct {
+	Error variant.Assignable
+	Value variant.Assignable
+}
+
+type ActorCallRequestOut struct {
 	Lazy       bool
 	ActorType  string
 	ActorId    []string
@@ -26,16 +40,23 @@ type ActorCallRequest struct {
 	Arguments  []any
 }
 
-type ActorCallResponse struct {
+type ActorCallResponseOut struct {
 	Error any
 	Value any
 }
 
-type Tags struct {
+type TagsIn struct {
 	TransportTags
 	RemoteCallTags
-	ActorCallRequest
-	ActorCallResponse
+	ActorCallRequestIn
+	ActorCallResponseIn
+}
+
+type TagsOut struct {
+	TransportTags
+	RemoteCallTags
+	ActorCallRequestOut
+	ActorCallResponseOut
 }
 
 const CHAR_CODE_VERSION_MAJOR = '0'
@@ -47,7 +68,7 @@ const CHAR_CODE_CALL = 'c'
 const CHAR_CODE_FALSE = 'f'
 const CHAR_CODE_TRUE = 't'
 
-func Serialize(buf *bytes.Buffer, tags Tags) error {
+func Serialize(buf *bytes.Buffer, tags TagsOut) error {
 	// Version
 	fastproto.WriteChar(buf, CHAR_CODE_VERSION_MAJOR)
 	fastproto.WriteChar(buf, CHAR_CODE_VERSION_MINOR)
@@ -99,12 +120,12 @@ func Serialize(buf *bytes.Buffer, tags Tags) error {
 	}
 
 	// Call response
-	fastproto.WriteVariant(buf, tags.ActorCallResponse.Value)
-	fastproto.WriteJson(buf, tags.ActorCallResponse.Error)
+	fastproto.WriteVariant(buf, tags.ActorCallResponseOut.Value)
+	fastproto.WriteJson(buf, tags.ActorCallResponseOut.Error)
 	return nil
 }
 
-func Deserialize(buf *bytes.Buffer, tags *Tags) error {
+func Deserialize(buf *bytes.Buffer, tags *TagsIn) error {
 	// Version number major + minor
 	major, err := fastproto.ReadChar(buf)
 	if err != nil {
@@ -209,7 +230,7 @@ func Deserialize(buf *bytes.Buffer, tags *Tags) error {
 
 	nrArguments, err := fastproto.ReadUnsignedInt(buf)
 	if nrArguments > 0 {
-		args := make([]any, nrArguments)
+		args := make([]variant.Assignable, nrArguments)
 		for i := 0; i < int(nrArguments); i++ {
 			arg, err := fastproto.ReadVariant(buf)
 			if err != nil {

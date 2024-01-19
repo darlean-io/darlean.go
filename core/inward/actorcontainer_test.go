@@ -5,9 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/darlean-io/darlean.go/base/actionerror"
+	"github.com/darlean-io/darlean.go/core/normalized"
 	"github.com/darlean-io/darlean.go/core/wire"
 
 	"github.com/darlean-io/darlean.go/utils/checks"
+	. "github.com/darlean-io/darlean.go/utils/variant"
 )
 
 func TestActorContainer(t *testing.T) {
@@ -20,11 +23,11 @@ func TestActorContainer(t *testing.T) {
 
 	var results []string
 
-	container := NewStandardActorContainer(false, GetTestActionDefs(), wrapperFactory, func() {
+	container := NewStandardActorContainer(normalized.NormalizeActorType("TestActor"), false, GetTestActionDefs(), wrapperFactory, func() {
 		results = append(results, "CONTAINER-STOPPED")
 	})
 
-	handleResult := func(result any, err error) {
+	handleResult := func(result any, err *actionerror.Error) {
 		if err != nil {
 			results = append(results, fmt.Sprintf("ERR:%v", err))
 		} else {
@@ -32,9 +35,9 @@ func TestActorContainer(t *testing.T) {
 		}
 	}
 
-	container.Dispatch(&wire.ActorCallRequest{ActorId: []string{"123"}, ActionName: "Exclusive", Arguments: []any{"Hello"}}, handleResult)
-	container.Dispatch(&wire.ActorCallRequest{ActorId: []string{"123"}, ActionName: "Exclusive", Arguments: []any{"World"}}, handleResult)
-	container.Dispatch(&wire.ActorCallRequest{ActorId: []string{"234"}, ActionName: "Exclusive", Arguments: []any{"Moon"}}, handleResult)
+	container.Dispatch(&wire.ActorCallRequestIn{ActorId: []string{"123"}, ActionName: "Exclusive", Arguments: []Assignable{FromString("Hello")}}, handleResult)
+	container.Dispatch(&wire.ActorCallRequestIn{ActorId: []string{"123"}, ActionName: "Exclusive", Arguments: []Assignable{FromString("World")}}, handleResult)
+	container.Dispatch(&wire.ActorCallRequestIn{ActorId: []string{"234"}, ActionName: "Exclusive", Arguments: []Assignable{FromString("Moon")}}, handleResult)
 
 	time.Sleep(SLEEP_BASIS * 5)
 
@@ -42,8 +45,8 @@ func TestActorContainer(t *testing.T) {
 
 	time.Sleep(SLEEP_BASIS_HALF)
 
-	container.Dispatch(&wire.ActorCallRequest{ActorId: []string{"123"}, ActionName: "Exclusive", Arguments: []any{"Too-late"}}, handleResult)
-	container.Dispatch(&wire.ActorCallRequest{ActorId: []string{"234"}, ActionName: "Exclusive", Arguments: []any{"Too-late"}}, handleResult)
+	container.Dispatch(&wire.ActorCallRequestIn{ActorId: []string{"123"}, ActionName: "Exclusive", Arguments: []Assignable{FromString("Too-late")}}, handleResult)
+	container.Dispatch(&wire.ActorCallRequestIn{ActorId: []string{"234"}, ActionName: "Exclusive", Arguments: []Assignable{FromString("Too-late")}}, handleResult)
 
 	time.Sleep(time.Second)
 

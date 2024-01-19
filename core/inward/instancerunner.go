@@ -1,18 +1,19 @@
 package inward
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 
+	"github.com/darlean-io/darlean.go/base/actionerror"
 	"github.com/darlean-io/darlean.go/core/normalized"
 	"github.com/darlean-io/darlean.go/core/wire"
+	"github.com/darlean-io/darlean.go/utils/variant"
 )
 
 type InstanceWrapper interface {
 	Activate() error
 	Deactivate() error
-	Perform(actionName normalized.ActionName, args []any) (result any, err error)
+	Perform(actionName normalized.ActionName, args []variant.Assignable) (result any, err error)
 }
 
 type ActionLockKind int
@@ -28,10 +29,12 @@ const action_kind_activate = actionKind(1)
 const action_kind_deactivate = actionKind(2)
 
 type ActionDef struct {
-	locking ActionLockKind
+	Locking ActionLockKind
 }
 
 type DefaultInstanceRunner struct {
+	actorType      normalized.ActorType
+	actorId        []string
 	wrapper        InstanceWrapper
 	requiresLock   bool
 	actionDefs     map[normalized.ActionName]ActionDef
@@ -52,10 +55,10 @@ const state_deactivation_wanted = 3
 const state_deactivating = 4
 const state_deactivated = 5
 
-type FinishedHandler func(result any, err error)
+type FinishedHandler func(result any, err *actionerror.Error)
 
 type callRec struct {
-	call       *wire.ActorCallRequest
+	call       *wire.ActorCallRequestIn
 	kind       actionKind
 	onFinished FinishedHandler
 	def        *ActionDef
@@ -91,7 +94,7 @@ type callFinishedRec struct {
 	finishedQueue      *callQueue
 	finishedHandler    FinishedHandler
 	result             any
-	err                error
+	err                *actionerror.Error
 }
 
 func newCallQueue() callQueue {
@@ -113,10 +116,17 @@ const ERROR_DEACTIVATED = "DEACTIVATED"
 const ERROR_UNKNOWN_ACTION = "UNKNOWN_ACTION"
 
 // Invokes a `call`. May block until the call is actually being processed.
-func (runner *DefaultInstanceRunner) Invoke(call *wire.ActorCallRequest, onFinished FinishedHandler) {
+func (runner *DefaultInstanceRunner) Invoke(call *wire.ActorCallRequestIn, onFinished FinishedHandler) {
 	actionDef, has := runner.actionDefs[normalized.NormalizeActionName(call.ActionName)]
 	if !has {
-		onFinished(nil, errors.New(ERROR_UNKNOWN_ACTION))
+		onFinished(nil, actionerror.NewFrameworkError(actionerror.Options{
+			Code:     ERROR_UNKNOWN_ACTION,
+			Template: "Unknown action [Action] on actor [ActorType]",
+			Parameters: map[string]any{
+				"Action":    call.ActionName,
+				"ActorType": call.ActorType,
+			},
+		}))
 		return
 	}
 
@@ -129,11 +139,16 @@ func (runner *DefaultInstanceRunner) Invoke(call *wire.ActorCallRequest, onFinis
 	defer runner.queueLock.RUnlock()
 
 	if !runner.running {
-		onFinished(nil, errors.New(ERROR_DEACTIVATED))
+		onFinished(nil, actionerror.NewFrameworkError(actionerror.Options{
+			Code:     ERROR_DEACTIVATED,
+			Template: "Actor type [ActorType] is deactivated",
+			Parameters: map[string]any{
+				"ActorType": call.ActorType,
+			}}))
 		return
 	}
 
-	switch actionDef.locking {
+	switch actionDef.Locking {
 	case ACTION_LOCK_EXCLUSIVE:
 		runner.exclusiveCalls.push(callRec{call: call, def: &actionDef, onFinished: onFinished})
 	case ACTION_LOCK_SHARED:
@@ -188,12 +203,18 @@ func (runner *DefaultInstanceRunner) loop(activationErrorHandler FinishedHandler
 	}
 
 	drainQueues := func() {
-		err := errors.New(ERROR_DEACTIVATED)
 		for _, queue := range []callQueue{runner.exclusiveCalls, runner.sharedCalls, runner.noneCalls} {
 		inner:
 			for {
 				select {
 				case call := <-queue.queue:
+					err := actionerror.NewFrameworkError(actionerror.Options{
+						Code:     ERROR_DEACTIVATED,
+						Template: "Actor type [call.ActorType] is deactivated",
+						Parameters: map[string]any{
+							"ActorType": call.call.ActorType,
+						}})
+
 					call.onFinished(nil, err)
 				default:
 					break inner
@@ -205,23 +226,39 @@ func (runner *DefaultInstanceRunner) loop(activationErrorHandler FinishedHandler
 	// Invoke one specific call and update the administration for the queue accordingly
 	invoke := func(call callRec, queue *callQueue) {
 		queue.do()
-		var result any
-		var err error
 		go func() {
 			// Note: This code runs parallel to our loop in a goroutine. It should not modify the state
 			// of the runner to avoid race conditions/corruption. The only allowed communication with
 			// the loop is by pushing to the finishedCalls channel.
+			var result any
+			var err error
 
 			defer func() {
 				if r := recover(); r != nil {
 					err = fmt.Errorf("instancerunner: invoke: panic: %v", r)
 				}
+				var actionError *actionerror.Error
+				if err != nil {
+					asActionError, has := err.(actionerror.Error)
+					if has {
+						actionError = &asActionError
+					} else {
+						actionError = actionerror.NewApplicationError(actionerror.Options{
+							Code:     "UNEXPECTED_APPLICATION_ERROR",
+							Template: "Unexpected application error: [Message]",
+							Parameters: map[string]any{
+								"Message": err.Error(),
+							},
+						})
+					}
+				}
+
 				finishedCalls <- &callFinishedRec{
 					finishedActionKind: call.kind,
 					finishedQueue:      queue,
 					finishedHandler:    call.onFinished,
 					result:             result,
-					err:                err,
+					err:                actionError,
 				}
 			}()
 			switch call.kind {
@@ -238,7 +275,13 @@ func (runner *DefaultInstanceRunner) loop(activationErrorHandler FinishedHandler
 	// Acquire the actor lock
 	err := runner.acquireActorLock()
 	if err != nil {
-		activationErrorHandler(nil, err)
+		activationErrorHandler(nil, actionerror.NewFrameworkError(actionerror.Options{
+			Code:     "ACTOR_LOCK_FAILED",
+			Template: "Unable to obtain actor lock for an instance of [ActorType]: [Reason]",
+			Parameters: map[string]any{
+				"ActorType": runner.actorType,
+				"Reason":    err.Error(),
+			}}))
 	}
 
 	defer runner.releaseActorLock()
@@ -323,8 +366,10 @@ func (runner *DefaultInstanceRunner) loop(activationErrorHandler FinishedHandler
 	// * The list of pending calls are informed by the other "defer".
 }
 
-func NewInstanceRunner(wrapper InstanceWrapper, requiresLock bool, actionDefs map[normalized.ActionName]ActionDef, onDeactivated func()) *DefaultInstanceRunner {
+func NewInstanceRunner(wrapper InstanceWrapper, actorType normalized.ActorType, actorId []string, requiresLock bool, actionDefs map[normalized.ActionName]ActionDef, onDeactivated func()) *DefaultInstanceRunner {
 	runner := DefaultInstanceRunner{
+		actorType:      actorType,
+		actorId:        actorId,
 		wrapper:        wrapper,
 		requiresLock:   requiresLock,
 		actionDefs:     actionDefs,

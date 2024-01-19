@@ -29,7 +29,7 @@ type TransportHandler struct {
 }
 
 type InwardCallDispatcher interface {
-	Dispatch(tags *wire.ActorCallRequest, onFinished func(*wire.ActorCallResponse))
+	Dispatch(tags *wire.ActorCallRequestIn, onFinished func(*wire.ActorCallResponseOut))
 }
 
 func (invoker *TransportHandler) Listen() {
@@ -46,8 +46,8 @@ func (invoker *TransportHandler) Listen() {
 			}
 
 			go func() {
-				invoker.dispatcher.Dispatch(&tags.ActorCallRequest, func(response *wire.ActorCallResponse) {
-					responseMsg := wire.Tags{
+				invoker.dispatcher.Dispatch(&tags.ActorCallRequestIn, func(response *wire.ActorCallResponseOut) {
+					responseMsg := wire.TagsOut{
 						TransportTags: wire.TransportTags{
 							Transport_Receiver: tags.Transport_Return,
 							Transport_Return:   invoker.appId,
@@ -56,9 +56,8 @@ func (invoker *TransportHandler) Listen() {
 							Remotecall_Kind: "return",
 							Remotecall_Id:   tags.Remotecall_Id,
 						},
-						ActorCallResponse: *response,
+						ActorCallResponseOut: *response,
 					}
-					// fmt.Printf("Sending %+v\n", responseMsg)
 					invoker.transport.Send(responseMsg)
 				})
 			}()
@@ -70,7 +69,7 @@ func (invoker *TransportHandler) Listen() {
 	}
 }
 
-func (handler *TransportHandler) handleReturnMessage(tags *wire.Tags) {
+func (handler *TransportHandler) handleReturnMessage(tags *wire.TagsIn) {
 	handler.mutex.Lock()
 	call, found := handler.pendingCalls[tags.Remotecall_Id]
 	if found {
@@ -110,7 +109,7 @@ func (handler *TransportHandler) Start() {
 func (handler *TransportHandler) Invoke(req *invoke.TransportHandlerInvokeRequest) *invoker.Response {
 	id := uuid.NewString()
 
-	tags := wire.Tags{}
+	tags := wire.TagsOut{}
 	tags.Transport_Receiver = req.Receiver
 	tags.Transport_Return = handler.appId
 	tags.Remotecall_Id = id

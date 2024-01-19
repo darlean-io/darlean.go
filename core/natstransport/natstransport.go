@@ -14,7 +14,7 @@ import (
 type NatsTransport struct {
 	connection   *nats.Conn
 	rawinput     chan *nats.Msg
-	tagsinput    chan *wire.Tags
+	tagsinput    chan *wire.TagsIn
 	subscription *nats.Subscription
 }
 
@@ -31,7 +31,7 @@ func New(address string, appId string) (*NatsTransport, error) {
 		return nil, err
 	}
 
-	input2 := make(chan *wire.Tags, 16)
+	input2 := make(chan *wire.TagsIn, 16)
 
 	// Subscription's closehandler does not work. To use connection closehandler instead.
 	nc.SetClosedHandler(func(c *nats.Conn) {
@@ -50,7 +50,7 @@ func New(address string, appId string) (*NatsTransport, error) {
 	return &t, nil
 }
 
-func (transport *NatsTransport) Send(tags wire.Tags) error {
+func (transport *NatsTransport) Send(tags wire.TagsOut) error {
 	buf := new(bytes.Buffer)
 	err := wire.Serialize(buf, tags)
 	if err != nil {
@@ -67,7 +67,7 @@ func (transport *NatsTransport) Send(tags wire.Tags) error {
 }
 
 // Listens to nats.Msg on input and forwards them as wire.Tags messages to output.
-func (transport *NatsTransport) listen(input chan *nats.Msg, output chan *wire.Tags) {
+func (transport *NatsTransport) listen(input chan *nats.Msg, output chan *wire.TagsIn) {
 	defer close(output)
 
 	for msg := range input {
@@ -79,7 +79,7 @@ func (transport *NatsTransport) listen(input chan *nats.Msg, output chan *wire.T
 		}
 		lengths := strings.Split(lengthsString, ",")
 		for range lengths {
-			tags := wire.Tags{}
+			tags := wire.TagsIn{}
 			err := wire.Deserialize(buf, &tags)
 			if err != nil {
 				panic(err)
@@ -101,6 +101,6 @@ func (transport *NatsTransport) Stop() {
 }
 
 // Returns the channel to which incoming messages are emitted.
-func (transport NatsTransport) GetInputChannel() chan *wire.Tags {
+func (transport NatsTransport) GetInputChannel() chan *wire.TagsIn {
 	return transport.tagsinput
 }

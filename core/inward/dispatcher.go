@@ -1,16 +1,15 @@
 package inward
 
 import (
-	"fmt"
-
 	"github.com/darlean-io/darlean.go/core/normalized"
 	"github.com/darlean-io/darlean.go/core/wire"
 
+	"github.com/darlean-io/darlean.go/base/actionerror"
 	"github.com/darlean-io/darlean.go/base/services/actorregistry"
 )
 
 type ActorContainer interface {
-	Dispatch(call *wire.ActorCallRequest, onFinished FinishedHandler)
+	Dispatch(call *wire.ActorCallRequestIn, onFinished FinishedHandler)
 }
 
 type ActorInfo struct {
@@ -25,32 +24,40 @@ type Dispatcher struct {
 	registryPusher actorregistry.ActorRegistryPusher
 }
 
-func (dispatcher Dispatcher) Dispatch(call *wire.ActorCallRequest, onFinished func(*wire.ActorCallResponse)) {
-	dispatcher.doDispatch(call, func(result any, err error) {
+func (dispatcher Dispatcher) Dispatch(call *wire.ActorCallRequestIn, onFinished func(*wire.ActorCallResponseOut)) {
+	dispatcher.doDispatch(call, func(result any, err *actionerror.Error) {
 		if err != nil {
-			onFinished(&wire.ActorCallResponse{
+			onFinished(&wire.ActorCallResponseOut{
 				Error: err,
 			})
 			return
 		}
 
-		onFinished(&wire.ActorCallResponse{
+		onFinished(&wire.ActorCallResponseOut{
 			Value: result,
 		})
 	})
 }
 
-func (dispatcher Dispatcher) doDispatch(call *wire.ActorCallRequest, onFinished FinishedHandler) {
+func (dispatcher Dispatcher) doDispatch(call *wire.ActorCallRequestIn, onFinished FinishedHandler) {
 	actorType := call.ActorType
 	if actorType == "" {
-		onFinished(nil, fmt.Errorf("Actor type not specified: %s", actorType))
+		onFinished(nil, actionerror.NewFrameworkError(actionerror.Options{
+			Code:     "NO_ACTOR_TYPE",
+			Template: "Actor type not specified in actor call request",
+		}))
 		return
 	}
 
 	normalizedActorType := normalized.NormalizeActorType(actorType)
 	info, has := dispatcher.actorTypes[normalizedActorType]
 	if !has {
-		onFinished(nil, fmt.Errorf("Actor type not registered: %s", actorType))
+		onFinished(nil, actionerror.NewFrameworkError(actionerror.Options{
+			Code:     "ACTOR_TYPE_NOT_REGISTERED",
+			Template: "Actor type [ActorType] is not registered",
+			Parameters: map[string]any{
+				"ActorType": actorType,
+			}}))
 		return
 	}
 

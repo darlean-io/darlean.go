@@ -5,8 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/darlean-io/darlean.go/base/actionerror"
 	"github.com/darlean-io/darlean.go/core/wire"
 	"github.com/darlean-io/darlean.go/utils/checks"
+	. "github.com/darlean-io/darlean.go/utils/variant"
 )
 
 func TestInstanceRunner_Exclusive(t *testing.T) {
@@ -14,7 +16,7 @@ func TestInstanceRunner_Exclusive(t *testing.T) {
 
 	var results []string
 
-	handleResult := func(result any, err error) {
+	handleResult := func(result any, err *actionerror.Error) {
 		if err != nil {
 			results = append(results, fmt.Sprintf("ERR:%v", err))
 		} else {
@@ -22,15 +24,15 @@ func TestInstanceRunner_Exclusive(t *testing.T) {
 		}
 	}
 
-	runner.Invoke(&wire.ActorCallRequest{ActionName: "Exclusive", Arguments: []any{"Hello"}}, handleResult)
-	runner.Invoke(&wire.ActorCallRequest{ActionName: "Exclusive", Arguments: []any{"World"}}, handleResult)
+	runner.Invoke(&wire.ActorCallRequestIn{ActionName: "Exclusive", Arguments: []Assignable{FromString("Hello")}}, handleResult)
+	runner.Invoke(&wire.ActorCallRequestIn{ActionName: "Exclusive", Arguments: []Assignable{FromString("World")}}, handleResult)
 
 	time.Sleep(SLEEP_BASIS * 3)
 
 	runner.TriggerDeactivate()
 	time.Sleep(time.Second)
 
-	runner.Invoke(&wire.ActorCallRequest{ActionName: "Exclusive", Arguments: []any{"Too late"}}, handleResult)
+	runner.Invoke(&wire.ActorCallRequestIn{ActionName: "Exclusive", Arguments: []Assignable{FromString("Too late")}}, handleResult)
 
 	time.Sleep(time.Second)
 
@@ -56,7 +58,7 @@ func TestInstanceRunner_Shared(t *testing.T) {
 	runner, wrapper := newRunner()
 	var results []string
 
-	handleResult := func(result any, err error) {
+	handleResult := func(result any, err *actionerror.Error) {
 		if err != nil {
 			results = append(results, fmt.Sprintf("ERR:%v", err))
 		} else {
@@ -64,22 +66,22 @@ func TestInstanceRunner_Shared(t *testing.T) {
 		}
 	}
 
-	runner.Invoke(&wire.ActorCallRequest{ActionName: "Shared", Arguments: []any{"Hello"}}, handleResult)
+	runner.Invoke(&wire.ActorCallRequestIn{ActionName: "Shared", Arguments: []Assignable{FromString("Hello")}}, handleResult)
 	time.Sleep(SLEEP_BASIS_HALF)
-	runner.Invoke(&wire.ActorCallRequest{ActionName: "Shared", Arguments: []any{"World"}}, handleResult)
+	runner.Invoke(&wire.ActorCallRequestIn{ActionName: "Shared", Arguments: []Assignable{FromString("World")}}, handleResult)
 
 	time.Sleep(SLEEP_BASIS * 2)
 
-	runner.Invoke(&wire.ActorCallRequest{ActionName: "Shared", Arguments: []any{"Hello2"}}, handleResult)
+	runner.Invoke(&wire.ActorCallRequestIn{ActionName: "Shared", Arguments: []Assignable{FromString("Hello2")}}, handleResult)
 	time.Sleep(SLEEP_BASIS_HALF)
-	runner.Invoke(&wire.ActorCallRequest{ActionName: "Shared", Arguments: []any{"World2"}}, handleResult)
+	runner.Invoke(&wire.ActorCallRequestIn{ActionName: "Shared", Arguments: []Assignable{FromString("World2")}}, handleResult)
 	time.Sleep(time.Second)
 
 	runner.TriggerDeactivate()
 	time.Sleep(SLEEP_BASIS_HALF)
-	runner.Invoke(&wire.ActorCallRequest{ActionName: "Shared", Arguments: []any{"Too late"}}, handleResult)
+	runner.Invoke(&wire.ActorCallRequestIn{ActionName: "Shared", Arguments: []Assignable{FromString("Too late")}}, handleResult)
 	time.Sleep(time.Second)
-	runner.Invoke(&wire.ActorCallRequest{ActionName: "Shared", Arguments: []any{"Too late"}}, handleResult)
+	runner.Invoke(&wire.ActorCallRequestIn{ActionName: "Shared", Arguments: []Assignable{FromString("Too late")}}, handleResult)
 
 	time.Sleep(time.Second)
 
@@ -112,7 +114,7 @@ func TestInstanceRunner_None(t *testing.T) {
 	runner, wrapper := newRunner()
 	var results []string
 
-	handleResult := func(result any, err error) {
+	handleResult := func(result any, err *actionerror.Error) {
 		if err != nil {
 			results = append(results, fmt.Sprintf("ERR:%v", err))
 		} else {
@@ -122,19 +124,19 @@ func TestInstanceRunner_None(t *testing.T) {
 
 	// Use a slightly faster "none" fuction (with shorter delay than the "activate" that runs in parallel)
 	// to avoid race conditions when the activate and none return.
-	runner.Invoke(&wire.ActorCallRequest{ActionName: "NoneFaster", Arguments: []any{"Hello"}}, handleResult)
+	runner.Invoke(&wire.ActorCallRequestIn{ActionName: "NoneFaster", Arguments: []Assignable{FromString("Hello")}}, handleResult)
 	time.Sleep(SLEEP_BASIS_HALF)
-	runner.Invoke(&wire.ActorCallRequest{ActionName: "None", Arguments: []any{"World"}}, handleResult)
+	runner.Invoke(&wire.ActorCallRequestIn{ActionName: "None", Arguments: []Assignable{FromString("World")}}, handleResult)
 	time.Sleep(SLEEP_BASIS)
-	runner.Invoke(&wire.ActorCallRequest{ActionName: "None", Arguments: []any{"Foo"}}, handleResult)
+	runner.Invoke(&wire.ActorCallRequestIn{ActionName: "None", Arguments: []Assignable{FromString("Foo")}}, handleResult)
 
 	time.Sleep(time.Second)
 
 	runner.TriggerDeactivate()
 	time.Sleep(SLEEP_BASIS_HALF)
-	runner.Invoke(&wire.ActorCallRequest{ActionName: "None", Arguments: []any{"During-deactivate"}}, handleResult)
+	runner.Invoke(&wire.ActorCallRequestIn{ActionName: "None", Arguments: []Assignable{FromString("During-deactivate")}}, handleResult)
 	time.Sleep(SLEEP_BASIS)
-	runner.Invoke(&wire.ActorCallRequest{ActionName: "None", Arguments: []any{"Too late"}}, handleResult)
+	runner.Invoke(&wire.ActorCallRequestIn{ActionName: "None", Arguments: []Assignable{FromString("Too late")}}, handleResult)
 
 	time.Sleep(time.Second)
 

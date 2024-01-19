@@ -78,9 +78,10 @@ func (a *GoActorImpl) Deactivate() error {
 	return nil
 }
 
-func (a *GoActorImpl) Perform(actionName normalized.ActionName, args []any) (result any, err error) {
+func (a *GoActorImpl) Perform(actionName normalized.ActionName, args []variant.Assignable) (result any, err error) {
 	fmt.Printf("GoActorImpl received %s %v\n", actionName, args)
-	return strings.ToUpper(args[0].(string)), nil
+	arg0, err := args[0].AssignToString()
+	return strings.ToUpper(arg0), err
 }
 
 type GoActor_Echo struct {
@@ -121,7 +122,11 @@ func main() {
 
 	time.Sleep(time.Second)
 
-	container := inward.NewStandardActorContainer(false, map[normalized.ActionName]inward.ActionDef{}, func(id []string) inward.InstanceWrapper {
+	actionDefs := map[normalized.ActionName]inward.ActionDef{
+		normalized.NormalizeActionName("Echo"): {Locking: inward.ACTION_LOCK_EXCLUSIVE},
+	}
+
+	container := inward.NewStandardActorContainer(normalized.NormalizeActorType("GoActor"), false, actionDefs, func(id []string) inward.InstanceWrapper {
 		fmt.Printf("Wrapper created\n")
 		return &GoActorImpl{}
 	}, nil)
@@ -138,26 +143,14 @@ func main() {
 	tsEcho := tsActor.NewCall().Echo
 	tsEcho.A0_Msg = "Hello"
 	tsError := tsActor.Invoke(&tsEcho)
-	fmt.Printf("Received from typescript actor: %v %v\n", tsEcho.Result, tsError)
+	fmt.Printf("Received from typescript actor: %v / %v (expected: \"hello\")\n", tsEcho.Result, tsError)
 
 	goPortal := typedportal.ForSignature[GoActor](p)
 	goActor := goPortal.Obtain([]string{})
 	goEcho := goActor.NewCall().Echo
 	goEcho.A0_Input = "Foo"
 	goError := goActor.Invoke(&goEcho)
-	fmt.Printf("Received from go actor: %v / %v\n", goEcho.Result, goError)
-
-	/*echoPortal := typedportal.ForSignature[EchoActor](p)
-	actor := echoPortal.Obtain([]string{"abc"})
-	call := actor.NewCall().Echo
-	call.A0 = "Hello"
-	call.A2 = 42
-	err = actor.Invoke(&call)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Received via Portal: %v\n", call.Result)
-	*/
+	fmt.Printf("Received from go actor: %v / %+v (expected: \"FOO\")\n", goEcho.Result, goError)
 
 	time.Sleep(time.Second)
 	go toLowerCase(&invoker, "Hello")

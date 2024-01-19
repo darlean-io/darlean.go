@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/darlean-io/darlean.go/core/normalized"
+	"github.com/darlean-io/darlean.go/utils/variant"
 )
 
 type TestActorWrapper struct {
@@ -33,7 +34,7 @@ func (wrapper *TestActorWrapper) Deactivate() error {
 	return nil
 }
 
-func (wrapper *TestActorWrapper) Perform(actionName normalized.ActionName, args []any) (result any, err error) {
+func (wrapper *TestActorWrapper) Perform(actionName normalized.ActionName, args []variant.Assignable) (result any, err error) {
 	wrapper.history = append(wrapper.history, fmt.Sprintf("Perform {%v} with {%v}", string(actionName), args[0]))
 	if strings.Contains(string(actionName), "faster") {
 		time.Sleep(SLEEP_BASIS_SHORT)
@@ -41,25 +42,26 @@ func (wrapper *TestActorWrapper) Perform(actionName normalized.ActionName, args 
 		time.Sleep(SLEEP_BASIS)
 	}
 	wrapper.history = append(wrapper.history, fmt.Sprintf("Performed {%v} with {%v}", string(actionName), args[0]))
-	resultstring := strings.ToLower(args[0].(string))
+	arg0, err0 := args[0].AssignToString()
+	resultstring := strings.ToLower(arg0)
 	if wrapper.id != "" {
 		resultstring = wrapper.id + ":" + resultstring
 	}
-	return resultstring, nil
+	return resultstring, err0
 }
 
 func GetTestActionDefs() map[normalized.ActionName]ActionDef {
 	return map[normalized.ActionName]ActionDef{
-		"exclusive":  {locking: ACTION_LOCK_EXCLUSIVE},
-		"shared":     {locking: ACTION_LOCK_SHARED},
-		"none":       {locking: ACTION_LOCK_NONE},
-		"nonefaster": {locking: ACTION_LOCK_NONE},
+		"exclusive":  {Locking: ACTION_LOCK_EXCLUSIVE},
+		"shared":     {Locking: ACTION_LOCK_SHARED},
+		"none":       {Locking: ACTION_LOCK_NONE},
+		"nonefaster": {Locking: ACTION_LOCK_NONE},
 	}
 }
 
 func newRunner() (*DefaultInstanceRunner, *TestActorWrapper) {
 	var wrapper TestActorWrapper
 
-	runner := NewInstanceRunner(&wrapper, false, GetTestActionDefs(), nil)
+	runner := NewInstanceRunner(&wrapper, normalized.NormalizeActorType("TestActor"), []string{"123"}, false, GetTestActionDefs(), nil)
 	return runner, &wrapper
 }

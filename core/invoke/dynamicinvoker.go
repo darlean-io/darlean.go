@@ -30,7 +30,7 @@ func NewDynamicInvoker(transportInvoker TransportInvoker, backoff backoff.BackOf
 	}
 }
 
-func (invoker *DynamicInvoker) Invoke(request *invoker.Request) (any, *actionerror.Error) {
+func (invoker *DynamicInvoker) Invoke(request *invoker.Request) (variant.Assignable, *actionerror.Error) {
 	var bo backoff.BackOffSession
 	useCache := true
 	cacheInvalidated := false
@@ -101,13 +101,12 @@ func (invoker *DynamicInvoker) Invoke(request *invoker.Request) (any, *actionerr
 			}
 			staticRequest.Lazy = lazy
 			lazy = false
-
 			response := invoker.staticInvoker.Invoke(&staticRequest)
 
 			if response.Error != nil {
 				var err2 actionerror.Error
-				err := variant.Assign(response.Error, &err2)
-				if err != nil {
+				assignError := response.Error.AssignTo(&err2)
+				if assignError != nil {
 					causes = append(causes, actionerror.NewFrameworkError(actionerror.Options{
 						Code:     "ERROR_PARSE_ERROR",
 						Template: "Action returned an error, but unable to parse the error",

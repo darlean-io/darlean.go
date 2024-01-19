@@ -6,7 +6,6 @@ import (
 
 	"github.com/darlean-io/darlean.go/base/invoker"
 	"github.com/darlean-io/darlean.go/base/signature"
-	"github.com/darlean-io/darlean.go/utils/variant"
 )
 
 // ActorProxy is a proxy to a remote actor than can be used to invoke methods on a remote actor.
@@ -49,7 +48,7 @@ func (proxy ActorProxy[ActorSig]) Invoke(action signature.Action) error {
 	}
 	res := reflect.ValueOf(action)
 	res = res.Elem().FieldByName("Result")
-	return variant.Assign(resp, &res)
+	return resp.AssignToReflectValue(&res)
 }
 
 // NewCall returns a new instance of Calls that can be used to make a new call.

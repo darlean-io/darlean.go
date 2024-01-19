@@ -1,11 +1,11 @@
 package inward
 
 import (
-	"errors"
 	"strconv"
 	"strings"
 	"sync"
 
+	"github.com/darlean-io/darlean.go/base/actionerror"
 	"github.com/darlean-io/darlean.go/core/normalized"
 	"github.com/darlean-io/darlean.go/core/wire"
 )
@@ -13,13 +13,14 @@ import (
 type key string
 
 type InstanceRunner interface {
-	Invoke(call *wire.ActorCallRequest, onFinished FinishedHandler)
+	Invoke(call *wire.ActorCallRequestIn, onFinished FinishedHandler)
 	TriggerDeactivate()
 }
 
 type WrapperFactory func(id []string) InstanceWrapper
 
 type StandardActorContainer struct {
+	actorType      normalized.ActorType
 	instances      map[key]InstanceRunner
 	requiresLock   bool
 	actionDefs     map[normalized.ActionName]ActionDef
@@ -29,8 +30,9 @@ type StandardActorContainer struct {
 	active         bool
 }
 
-func NewStandardActorContainer(requiresLock bool, actionDefs map[normalized.ActionName]ActionDef, wrapperFactory WrapperFactory, onFinished func()) *StandardActorContainer {
+func NewStandardActorContainer(actorType normalized.ActorType, requiresLock bool, actionDefs map[normalized.ActionName]ActionDef, wrapperFactory WrapperFactory, onFinished func()) *StandardActorContainer {
 	return &StandardActorContainer{
+		actorType:      actorType,
 		instances:      make(map[key]InstanceRunner),
 		requiresLock:   requiresLock,
 		actionDefs:     actionDefs,
@@ -40,7 +42,7 @@ func NewStandardActorContainer(requiresLock bool, actionDefs map[normalized.Acti
 	}
 }
 
-func (container *StandardActorContainer) Dispatch(call *wire.ActorCallRequest, onFinished FinishedHandler) {
+func (container *StandardActorContainer) Dispatch(call *wire.ActorCallRequestIn, onFinished FinishedHandler) {
 	instancerunner, err := container.obtainInstanceRunner(call.ActorId)
 	if err != nil {
 		onFinished(nil, err)
@@ -49,7 +51,7 @@ func (container *StandardActorContainer) Dispatch(call *wire.ActorCallRequest, o
 	instancerunner.Invoke(call, onFinished)
 }
 
-func (container *StandardActorContainer) obtainInstanceRunner(actorId []string) (InstanceRunner, error) {
+func (container *StandardActorContainer) obtainInstanceRunner(actorId []string) (InstanceRunner, *actionerror.Error) {
 	// TODO: Only obtain write lock when item is not yet present (use read lock otherwise)
 	// TODO: Do not put creation of instance runner within the lock, unless it is for the
 	// same id. Different id's can be handled in parallel.
@@ -57,7 +59,10 @@ func (container *StandardActorContainer) obtainInstanceRunner(actorId []string) 
 	defer container.lock.Unlock()
 
 	if !container.active {
-		return nil, errors.New("CONTAINER_DEACTIVATING")
+		return nil, actionerror.NewFrameworkError(actionerror.Options{
+			Code:     "CONTAINER_DEACTIVATING",
+			Template: "Container is deactivating",
+		})
 	}
 
 	k := makeKey(actorId)
@@ -65,7 +70,7 @@ func (container *StandardActorContainer) obtainInstanceRunner(actorId []string) 
 	instancerunner, has := container.instances[k]
 	if !has {
 		wrapper := container.wrapperFactory(actorId)
-		instancerunner = NewInstanceRunner(wrapper, container.requiresLock, container.actionDefs, func() {
+		instancerunner = NewInstanceRunner(wrapper, container.actorType, actorId, container.requiresLock, container.actionDefs, func() {
 			container.handleDeactivate(k)
 		})
 		container.instances[k] = instancerunner

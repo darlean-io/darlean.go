@@ -126,7 +126,7 @@ func ReadJson(buf *bytes.Buffer) (variant.Assignable, error) {
 	if len(*data) == 0 {
 		return nil, nil
 	}
-	return jsonvariant.NewJsonAssignable(*data), err
+	return jsonvariant.FromJson(*data), err
 }
 
 func WriteVariant(buf *bytes.Buffer, value any) error {
@@ -168,10 +168,8 @@ func WriteVariant(buf *bytes.Buffer, value any) error {
 
 /*
 ReadVariant reads a value from buf that was previously stored via [WriteVariant].
-
-Returns nil, a string, true, false, a []byte or a [variant.Assignable].
 */
-func ReadVariant(buf *bytes.Buffer) (any, error) {
+func ReadVariant(buf *bytes.Buffer) (variant.Assignable, error) {
 	kind, err := ReadChar(buf)
 	if err != nil {
 		return nil, err
@@ -181,23 +179,23 @@ func ReadVariant(buf *bytes.Buffer) (any, error) {
 		return nil, nil
 	case CHAR_CODE_STRING:
 		val, err := ReadString(buf)
-		return *val, err
+		return variant.FromString(*val), err
 	case CHAR_CODE_NUMBER:
 		str, err := ReadString(buf)
 		if err != nil {
 			return nil, err
 		}
 		value, err := strconv.ParseFloat(*str, 64)
-		return value, nil
+		return variant.FromFloatNumber(value), err
 	case CHAR_CODE_JSON:
 		return ReadJson(buf)
 	case CHAR_CODE_FALSE:
-		return false, nil
+		return variant.FromBool(false), nil
 	case CHAR_CODE_TRUE:
-		return true, nil
+		return variant.FromBool(true), nil
 	case CHAR_CODE_BUFFER:
 		val, err := ReadBinary(buf)
-		return *val, err
+		return variant.FromBytes(*val), err
 	default:
 		panic("Not supported")
 	}
