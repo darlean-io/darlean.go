@@ -37,14 +37,17 @@ func NewApi(appId string, natsAddr string, hosts []string) *Api {
 	}
 
 	staticInvoker := transporthandler.New(transport, nil, appId)
-	registry := remoteactorregistry.NewFetcher(hosts, staticInvoker)
+	fetcher := remoteactorregistry.NewFetcher(hosts, staticInvoker)
 
 	backoff := backoff.Exponential(1*time.Millisecond, 6, 4.0, 0.25)
-	invoker := invoke.NewDynamicInvoker(staticInvoker, backoff, registry)
+	invoker := invoke.NewDynamicInvoker(staticInvoker, backoff, fetcher)
+
+	staticInvoker.Start()
+	fetcher.Start()
 
 	return &Api{
 		Invoker:   &invoker,
-		registry:  registry,
+		registry:  fetcher,
 		transport: transport,
 	}
 }

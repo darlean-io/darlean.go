@@ -123,15 +123,19 @@ func (registry *RemoteActorRegistryFetcher) Get(actorType string) *actorregistry
 }
 
 func (registry *RemoteActorRegistryFetcher) Start() {
+	registry.stop = make(chan bool)
 	go registry.loop(registry.stop, registry.force, 10*time.Second)
 }
 
 func (registry *RemoteActorRegistryFetcher) Stop() {
-	registry.stop <- true
+	if registry.stop != nil {
+		stop := registry.stop
+		registry.stop = nil
+		stop <- true
+	}
 }
 
 func NewFetcher(hosts []string, invoker invoke.TransportInvoker) *RemoteActorRegistryFetcher {
-	stop := make(chan bool)
 	force := make(chan bool)
 
 	var mutex sync.RWMutex
@@ -142,7 +146,6 @@ func NewFetcher(hosts []string, invoker invoke.TransportInvoker) *RemoteActorReg
 		nonce:   "",
 		invoker: invoker,
 		mutex:   &mutex,
-		stop:    stop,
 		force:   force,
 	}
 

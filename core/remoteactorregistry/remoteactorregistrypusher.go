@@ -87,22 +87,25 @@ func (registry *RemoteActorRegistryPusher) Set(info map[string]actorregistry.Act
 }
 
 func (registry *RemoteActorRegistryPusher) Start() {
+	registry.stop = make(chan bool)
 	go registry.loop(registry.stop, registry.force, 10*time.Second)
 }
 
 func (registry *RemoteActorRegistryPusher) Stop() {
-	registry.stop <- true
+	if registry.stop != nil {
+		stop := registry.stop
+		registry.stop = nil
+		stop <- true
+	}
 }
 
 func NewPusher(hosts []string, appId string, invoker invoke.TransportInvoker) *RemoteActorRegistryPusher {
-	stop := make(chan bool)
 	force := make(chan bool)
 
 	registry := RemoteActorRegistryPusher{
 		hosts:   hosts,
 		appId:   appId,
 		invoker: invoker,
-		stop:    stop,
 		force:   force,
 	}
 
