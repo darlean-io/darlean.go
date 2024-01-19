@@ -48,8 +48,8 @@ func (data intVariant) AssignToBytes() (value []byte, err error) {
 }
 
 /*
-FromIntNumber returns a new [Assignable] that can be assigned to an integer variable.
+FromInt returns a new [Assignable] that can be assigned to an integer variable.
 */
-func Fromint64(value int64) Assignable {
+func FromInt(value int64) Assignable {
 	return intVariant(value)
 }

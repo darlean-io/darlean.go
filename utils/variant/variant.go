@@ -1,3 +1,18 @@
+/*
+Package variant exposes types to abstract variant data and to assign it
+to variables (directly or via reflection).
+
+A typed variant is created by [FromString], [FromBool], [FromInt], [FromFloat],
+[FromNumberInt], [FromNumberFloat] or [FromBytes].
+
+A variant backed by a chunk of json is created by [jsonvariant.FromJson].const
+
+A variant satisfies [Assignable]. That is an interface that allows assignment of the
+internal variant value (or representation thereof) to variables, either directly (
+[Assignable.AssignTo], [Assignable.AssignToString], [Assignable.AssignToBool],
+[Assignable.AssignToFloat], [Assignable.AssignToInt], [Assignable.AssignToBytes]) or
+via reflection ([Assignable.AssignToReflectValue]).
+*/
 package variant
 
 import "reflect"

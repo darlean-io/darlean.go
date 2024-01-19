@@ -1,22 +1,33 @@
 package variant
 
 import (
-	"testing"
+	"fmt"
 )
 
-func TestAssignStringVariant(t *testing.T) {
+func ExampleFromString() {
 	v := FromString("Hello")
+
 	v1, _ := v.AssignToString()
-	Check(t, "Hello", v1, "Assign to specific type")
+	fmt.Printf("Via AssignToString: %s\n", v1)
 
 	var v2 string
 	v.AssignTo(&v2)
-	Check(t, "Hello", v2, "Assign to any type")
+	fmt.Printf("Via AssignTo: %s\n", v1)
 
 	_, err3 := v.AssignToBool()
-	CheckNotNil(t, err3, "Assign to wrong specific type should return error")
+	if err3 != nil {
+		fmt.Println("AssignToBool gives error")
+	}
 
 	var v4 bool
 	err4 := v.AssignTo(&v4)
-	CheckNotNil(t, err4, "Assign to wrong any type")
+	if err4 != nil {
+		fmt.Println("AssignTo a bool gives error")
+	}
+
+	// Output:
+	// Via AssignToString: Hello
+	// Via AssignTo: Hello
+	// AssignToBool gives error
+	// AssignTo a bool gives error
 }
