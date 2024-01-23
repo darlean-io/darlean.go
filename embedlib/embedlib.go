@@ -4,6 +4,9 @@ package main
 
 // typedef void (*invoke_cb)(_GoString_);
 // void makeCallback(_GoString_ bufhandle, invoke_cb cb);
+//
+// typedef void (*action_cb)(_GoString_);
+// void callActionCallback(_GoString_ bufhandle, action_cb cb);
 import "C"
 import (
 	"strings"
@@ -11,21 +14,45 @@ import (
 	"github.com/darlean-io/darlean.go/base/invoker"
 )
 
-var apiInstance *Api
+var appApis map[string]*Api = map[string]*Api{}
 
-//export Start
-func Start(appId string, natsAddr string, hosts string) {
+//export CreateApp
+func CreateApp(appId string, natsAddr string, hosts string) {
 	hostsArray := strings.Split(hosts, ",")
-	apiInstance = NewApi(appId, natsAddr, hostsArray)
+	_, has := appApis[appId]
+	if has {
+		panic("AppId already exists")
+	}
+	apiInstance := NewApi(appId, natsAddr, hostsArray)
+	appApis[appId] = apiInstance
 }
 
-//export Stop
-func Stop() {
-	apiInstance.Stop()
+func getApi(appId string) *Api {
+	api, has := appApis[appId]
+	if !has {
+		panic("No app for provided appId")
+	}
+	return api
+}
+
+//export StartApp
+func StartApp(appId string) {
+	getApi(appId).Start()
+}
+
+//export StopApp
+func StopApp(appId string) {
+	getApi(appId).Stop()
+}
+
+//export ReleaseApp
+func ReleaseApp(appId string) {
+	delete(appApis, appId)
 }
 
 //export Invoke
-func Invoke(cb C.invoke_cb, actorType string, actorId []string, actionName string, arguments string) {
+func Invoke(appId string, cb C.invoke_cb, actorType string, actorId []string, actionName string, arguments string) {
+	api := getApi(appId)
 	//goCb := func(bufhandle int) {
 	//	C.makeCallback(C.int(bufhandle), cb)
 	//}
@@ -38,5 +65,20 @@ func Invoke(cb C.invoke_cb, actorType string, actorId []string, actionName strin
 		ActionName: actionName,
 		Parameters: []any{arguments},
 	}
-	apiInstance.Invoke(&request, goCb)
+	api.Invoke(&request, goCb)
+}
+
+//export RegisterActor
+func RegisterActor(appId string, info string) {
+	// TODO
+}
+
+//export RegisterAction
+func RegisterAction(appId string, info string, cb C.action_cb) {
+	// TODO
+}
+
+//export SubmitActionResult
+func SubmitActionResult(appId string, callId string, result string) {
+	// TODO
 }

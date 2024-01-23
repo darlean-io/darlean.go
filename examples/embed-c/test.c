@@ -4,47 +4,78 @@
 
 // See: https://github.com/vladimirvivien/go-cshared-examples/blob/master/README.md
 
-void onInvoked(GoString s) {
-    char value[s.n+1];
+char appId[] = "client";
+char nats[] = "localhost:4500";
+char nodes[] = "server";
+
+// Convert c string into a go string.
+GoString* gostr(char* content) {
+    GoString* gs = malloc(sizeof(GoString));
+    gs->p = content;
+    gs->n = strlen(content);
+    return gs;
+}
+
+// Convert go string into a c string.
+char* cstr(GoString s) {
+    char *value = malloc(s.n+1);
     memcpy(value, s.p, s.n);
     value[s.n] = '\0';
+    return value;
+}
 
-    printf("Invoked: %s\n", value);
+
+// Handler when a remote invoke operation is done
+void onInvoked(GoString s) {
+    char *s2 = cstr(s);
+
+    printf("Invoked: %s\n", s2);
+}
+
+// Handle an incoming action. We should forward the call to one of our internal actors/actions/methods and
+// when finished, invoke the SubmitActionResult.
+void handleAction(GoString s) {
+    char *s2 = cstr(s);
+
+    printf("We should be handling action: %s\n", s2);
+
+    GoString* callId = gostr("1234567");
+    GoString* result = gostr("{\"Result\": \"Bar\"}");
+    SubmitActionResult(*gostr(appId), *callId, *result);
 }
 
 int main(void) {
-    char appId[] = "client";
-    char nats[] = "localhost:4500";
-    char nodes[] = "server";
 
-    GoString goAppId = {p: appId, n: sizeof(appId)-1};
-    GoString goNats = {p: nats, n: sizeof(nats)-1};
-    GoString goNodes = {p: nodes, n: sizeof(nodes)-1};
+    // Create the app with some basic config
+    CreateApp(*gostr(appId), *gostr(nats), *gostr(nodes));
+
+    // Register our local actor.
+    // Note: This functionality is not yet implemented in the go api wrapper.
+    GoString* ourActorRegistration = gostr("{\"actorType\": \"ouractor\"}");
+    GoString* ourActionRegistation = gostr("{\"actorType\": \"ouractor\", \"actionName\": \"echo\", \"locking\": \"exclusive\"}");
+    RegisterActor(*gostr(appId), *ourActorRegistration);
+    RegisterAction(*gostr(appId), *ourActionRegistation, handleAction);
+
+    // Start the app.
+    StartApp(*gostr(appId));
+
+    // Invoke a remote actor
+    GoString* goActorType = gostr("typescriptactor");
+    GoString* goActorId0 = gostr("a");
+    GoString* goActionName = gostr("echo");
+    GoString* goArgument = gostr("Moon");
     
-    Start(goAppId, goNats, goNodes);
-
-    char actorType[] = "echoactor";
-    char actorId0[] = "a";
-    char actionName[] = "echo";
-    char argument[] = "Moon";
+    GoString* goActorIdList[1] = {goActorId0};
+    GoSlice goActorId = {data: *goActorIdList, 1, 1};
+    GoString* goArgumentList[1] = {goArgument};
+    GoSlice goArguments = {data: *goArgumentList, 1, 1};
 
 
-    GoString goActorType = {p: actorType, n: sizeof(actorType)-1};
-
-    GoString goActorId0 = {p: actorId0, n: sizeof(actorId0)-1};
-    GoString goActorIdList[1] = {goActorId0};
-    GoSlice goActorId = {data: goActorIdList, 1, 1};
-
-    GoString goActionName = {p: actionName, n: sizeof(actionName)-1};
-
-    GoString goArgument = {p: argument, n: sizeof(argument)-1};
-    GoString goArgumentList[1] = {goArgument};
-    GoSlice goArguments = {data: goArgumentList, 1, 1};
-
-    printf("Invoking: %s\n", argument);
-    Invoke(onInvoked, goActorType, goActorId, goActionName, goArgument);
+    printf("Invoking: %s\n", cstr(*goArgument));
+    Invoke(*gostr(appId), onInvoked,  *goActorType, goActorId, *goActionName, *goArgument);
     
     Sleep(5*1000);
     
-    Stop();
+    StopApp(*gostr(appId));
+    ReleaseApp(*gostr(appId));
 }
