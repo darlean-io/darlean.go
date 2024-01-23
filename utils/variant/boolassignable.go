@@ -19,6 +19,12 @@ func (data boolVariant) AssignToReflectValue(targetVal *reflect.Value) error {
 		targetVal.SetBool(bool(data))
 		return nil
 	}
+
+	if targetVal.Kind() == reflect.Interface && targetVal.IsZero() {
+		targetVal.Set(reflect.ValueOf(data))
+		return nil
+	}
+
 	return errors.New("variant: target is not a bool")
 }
 

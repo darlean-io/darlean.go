@@ -25,9 +25,14 @@ func ExampleFromString() {
 		fmt.Println("AssignTo a bool gives error")
 	}
 
+	var v5 any
+	v.AssignTo(&v5)
+	fmt.Printf("Via AssignTo an any: %s\n", v5)
+
 	// Output:
 	// Via AssignToString: Hello
 	// Via AssignTo: Hello
 	// AssignToBool gives error
 	// AssignTo a bool gives error
+	// Via AssignTo an any: Hello
 }

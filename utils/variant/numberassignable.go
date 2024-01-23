@@ -24,6 +24,12 @@ func (data numberVariant) AssignToReflectValue(targetVal *reflect.Value) error {
 		targetVal.SetInt(int64(float64(data)))
 		return nil
 	}
+
+	if targetVal.Kind() == reflect.Interface && targetVal.IsZero() {
+		targetVal.Set(reflect.ValueOf(data))
+		return nil
+	}
+
 	return errors.New("variant: target is not a number")
 }
 
