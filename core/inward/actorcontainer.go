@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/darlean-io/darlean.go/base/actionerror"
+	"github.com/darlean-io/darlean.go/core/internal/frameworkerror"
 	"github.com/darlean-io/darlean.go/core/normalized"
 	"github.com/darlean-io/darlean.go/core/wire"
 )
@@ -28,6 +29,7 @@ type StandardActorContainer struct {
 	wrapperFactory WrapperFactory
 	onFinished     func()
 	active         bool
+	finishedChan   chan int
 }
 
 func NewStandardActorContainer(actorType normalized.ActorType, requiresLock bool, actionDefs map[normalized.ActionName]ActionDef, wrapperFactory WrapperFactory, onFinished func()) *StandardActorContainer {
@@ -39,6 +41,7 @@ func NewStandardActorContainer(actorType normalized.ActorType, requiresLock bool
 		wrapperFactory: wrapperFactory,
 		onFinished:     onFinished,
 		active:         true,
+		finishedChan:   make(chan int),
 	}
 }
 
@@ -59,7 +62,7 @@ func (container *StandardActorContainer) obtainInstanceRunner(actorId []string) 
 	defer container.lock.Unlock()
 
 	if !container.active {
-		return nil, actionerror.NewFrameworkError(actionerror.Options{
+		return nil, frameworkerror.New(actionerror.Options{
 			Code:     "CONTAINER_DEACTIVATING",
 			Template: "Container is deactivating",
 		})
@@ -70,8 +73,13 @@ func (container *StandardActorContainer) obtainInstanceRunner(actorId []string) 
 	instancerunner, has := container.instances[k]
 	if !has {
 		wrapper := container.wrapperFactory(actorId)
+		err := wrapper.Create()
+		if err != nil {
+			return nil, err
+		}
 		instancerunner = NewInstanceRunner(wrapper, container.actorType, actorId, container.requiresLock, container.actionDefs, func() {
-			container.handleDeactivate(k)
+			wrapper.Release()
+			container.handleActorDeactivated(k)
 		})
 		container.instances[k] = instancerunner
 	}
@@ -80,6 +88,11 @@ func (container *StandardActorContainer) obtainInstanceRunner(actorId []string) 
 }
 
 func (container *StandardActorContainer) Stop() {
+	container.triggerStop()
+	<-container.finishedChan
+}
+
+func (container *StandardActorContainer) triggerStop() {
 	container.lock.Lock()
 	defer container.lock.Unlock()
 	if !container.active {
@@ -91,21 +104,24 @@ func (container *StandardActorContainer) Stop() {
 	}
 
 	if len(container.instances) == 0 {
-		if container.onFinished != nil {
-			container.onFinished()
-		}
+		container.handleStopped()
 	}
 }
 
-func (container *StandardActorContainer) handleDeactivate(key key) {
+func (container *StandardActorContainer) handleActorDeactivated(key key) {
 	container.lock.Lock()
 	defer container.lock.Unlock()
 	delete(container.instances, key)
 	if (!container.active) && len(container.instances) == 0 {
-		if container.onFinished != nil {
-			container.onFinished()
-		}
+		container.handleStopped()
 	}
+}
+
+func (container *StandardActorContainer) handleStopped() {
+	if container.onFinished != nil {
+		container.onFinished()
+	}
+	close(container.finishedChan)
 }
 
 func makeKey(keyParts []string) key {

@@ -74,7 +74,8 @@ func FormatTemplate(template string, parameters map[string]any) string {
 	return message
 }
 
-func newActionError(options Options, kind Kind) *Error {
+// For internal use. Use [New] or [FromError] instead.
+func NewActionError(options Options, kind Kind) *Error {
 	e := Error{
 		Kind:       kind,
 		Code:       options.Code,
@@ -97,15 +98,19 @@ func newActionError(options Options, kind Kind) *Error {
 	return &e
 }
 
-// Returns a new framework action error for the specified options. Application code
-// should not use this function, but should use [base.NewApplicationError] instead.
-func NewFrameworkError(options Options) *Error {
-	return newActionError(options, ERROR_KIND_FRAMEWORK)
-}
-
 // Returns a new application action error for the specified options. Application code
 // is encouraged to use this mechanism instead of regular errors, because it provides a
 // consistent way of propagating errors throughout the Darlean cluster.
-func NewApplicationError(options Options) *Error {
-	return newActionError(options, ERROR_KIND_APPLICATION)
+func New(options Options) *Error {
+	return NewActionError(options, ERROR_KIND_APPLICATION)
+}
+
+// Returns a new application action error for the specified error.
+func FromError(e error) *Error {
+	if e == nil {
+		return nil
+	}
+	return New(Options{
+		Template: e.Error(),
+	})
 }

@@ -19,11 +19,20 @@ type SubmitActionResultOptions struct {
 	Error *ActionError
 }
 
+type SpecialActionName string
+
+const SPECIAL_ACTION_NONE = SpecialActionName("")
+const SPECIAL_ACTION_CREATE = SpecialActionName("create")
+const SPECIAL_ACTION_ACTIVATE = SpecialActionName("activate")
+const SPECIAL_ACTION_DEACTIVATE = SpecialActionName("deactivate")
+const SPECIAL_ACTION_RELEASE = SpecialActionName("release")
+
 type PerformActionOptions struct {
-	ActorType  string
-	ActorId    []string
-	ActionName string
-	Arguments  []any
+	ActorType         string
+	ActorId           []string
+	ActionName        string
+	SpecialActionName SpecialActionName
+	Arguments         []any
 }
 
 type InvokeActionOptions struct {

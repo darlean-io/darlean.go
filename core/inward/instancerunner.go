@@ -5,15 +5,18 @@ import (
 	"sync"
 
 	"github.com/darlean-io/darlean.go/base/actionerror"
+	"github.com/darlean-io/darlean.go/core/internal/frameworkerror"
 	"github.com/darlean-io/darlean.go/core/normalized"
 	"github.com/darlean-io/darlean.go/core/wire"
 	"github.com/darlean-io/darlean.go/utils/variant"
 )
 
 type InstanceWrapper interface {
-	Activate() error
-	Deactivate() error
-	Perform(actionName normalized.ActionName, args []variant.Assignable) (result any, err error)
+	Create() *actionerror.Error
+	Activate() *actionerror.Error
+	Deactivate() *actionerror.Error
+	Release() *actionerror.Error
+	Perform(actionName normalized.ActionName, args []variant.Assignable) (result any, err *actionerror.Error)
 }
 
 type ActionLockKind int
@@ -119,7 +122,7 @@ const ERROR_UNKNOWN_ACTION = "UNKNOWN_ACTION"
 func (runner *DefaultInstanceRunner) Invoke(call *wire.ActorCallRequestIn, onFinished FinishedHandler) {
 	actionDef, has := runner.actionDefs[normalized.NormalizeActionName(call.ActionName)]
 	if !has {
-		onFinished(nil, actionerror.NewFrameworkError(actionerror.Options{
+		onFinished(nil, frameworkerror.New(actionerror.Options{
 			Code:     ERROR_UNKNOWN_ACTION,
 			Template: "Unknown action [Action] on actor [ActorType]",
 			Parameters: map[string]any{
@@ -139,7 +142,7 @@ func (runner *DefaultInstanceRunner) Invoke(call *wire.ActorCallRequestIn, onFin
 	defer runner.queueLock.RUnlock()
 
 	if !runner.running {
-		onFinished(nil, actionerror.NewFrameworkError(actionerror.Options{
+		onFinished(nil, frameworkerror.New(actionerror.Options{
 			Code:     ERROR_DEACTIVATED,
 			Template: "Actor type [ActorType] is deactivated",
 			Parameters: map[string]any{
@@ -208,7 +211,7 @@ func (runner *DefaultInstanceRunner) loop(activationErrorHandler FinishedHandler
 			for {
 				select {
 				case call := <-queue.queue:
-					err := actionerror.NewFrameworkError(actionerror.Options{
+					err := frameworkerror.New(actionerror.Options{
 						Code:     ERROR_DEACTIVATED,
 						Template: "Actor type [call.ActorType] is deactivated",
 						Parameters: map[string]any{
@@ -231,30 +234,17 @@ func (runner *DefaultInstanceRunner) loop(activationErrorHandler FinishedHandler
 			// of the runner to avoid race conditions/corruption. The only allowed communication with
 			// the loop is by pushing to the finishedCalls channel.
 			var result any
-			var err error
+			var err *actionerror.Error
 
 			defer func() {
 				if r := recover(); r != nil {
-					err = fmt.Errorf("instancerunner: invoke: panic: %v", r)
-				}
-				var actionError *actionerror.Error
-				// Note: When you see stringe things here, like errors that err is nil even though you
-				// are inside the if block, it may be because the underlying nil is a "typed nil"
-				// (like (MyError)(nil)) instead of a plain nil ((any)(nil)).
-				// See https://codefibershq.com/blog/golang-why-nil-is-not-always-nil.
-				if err != nil {
-					asActionError, has := err.(actionerror.Error)
-					if has {
-						actionError = &asActionError
-					} else {
-						actionError = actionerror.NewApplicationError(actionerror.Options{
-							Code:     "UNEXPECTED_APPLICATION_ERROR",
-							Template: "Unexpected application error: [Message]",
-							Parameters: map[string]any{
-								"Message": err.Error(),
-							},
-						})
-					}
+					err = actionerror.New(actionerror.Options{
+						Code:     "UNEXPECTED_APPLICATION_ERROR",
+						Template: "Unexpected application error: [Message]",
+						Parameters: map[string]any{
+							"Message": fmt.Sprintf("instancerunner: invoke: panic: %v", r),
+						},
+					})
 				}
 
 				finishedCalls <- &callFinishedRec{
@@ -262,7 +252,7 @@ func (runner *DefaultInstanceRunner) loop(activationErrorHandler FinishedHandler
 					finishedQueue:      queue,
 					finishedHandler:    call.onFinished,
 					result:             result,
-					err:                actionError,
+					err:                err,
 				}
 			}()
 			switch call.kind {
@@ -279,7 +269,7 @@ func (runner *DefaultInstanceRunner) loop(activationErrorHandler FinishedHandler
 	// Acquire the actor lock
 	err := runner.acquireActorLock()
 	if err != nil {
-		activationErrorHandler(nil, actionerror.NewFrameworkError(actionerror.Options{
+		activationErrorHandler(nil, frameworkerror.New(actionerror.Options{
 			Code:     "ACTOR_LOCK_FAILED",
 			Template: "Unable to obtain actor lock for an instance of [ActorType]: [Reason]",
 			Parameters: map[string]any{

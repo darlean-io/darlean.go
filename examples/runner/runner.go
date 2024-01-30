@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/darlean-io/darlean.go/base/actionerror"
 	"github.com/darlean-io/darlean.go/base/invoker"
 	"github.com/darlean-io/darlean.go/base/portal"
 	"github.com/darlean-io/darlean.go/base/services/actorregistry"
@@ -70,18 +71,26 @@ type TypescriptActor struct {
 
 type GoActorImpl struct{}
 
-func (a *GoActorImpl) Activate() error {
+func (a *GoActorImpl) Create() *actionerror.Error {
 	return nil
 }
 
-func (a *GoActorImpl) Deactivate() error {
+func (a *GoActorImpl) Release() *actionerror.Error {
 	return nil
 }
 
-func (a *GoActorImpl) Perform(actionName normalized.ActionName, args []variant.Assignable) (result any, err error) {
+func (a *GoActorImpl) Activate() *actionerror.Error {
+	return nil
+}
+
+func (a *GoActorImpl) Deactivate() *actionerror.Error {
+	return nil
+}
+
+func (a *GoActorImpl) Perform(actionName normalized.ActionName, args []variant.Assignable) (result any, err *actionerror.Error) {
 	fmt.Printf("GoActorImpl received %s %v\n", actionName, args)
-	arg0, err := args[0].AssignToString()
-	return strings.ToUpper(arg0), err
+	arg0, e := args[0].AssignToString()
+	return strings.ToUpper(arg0), actionerror.FromError(e)
 }
 
 type GoActor_Echo struct {
@@ -171,6 +180,7 @@ func main() {
 	go toLowerCase(&invoker, "World")
 
 	time.Sleep(15 * time.Second)
+	container.Stop()
 	registryFetcher.Stop()
 	registryPusher.Stop()
 	transport.Stop()

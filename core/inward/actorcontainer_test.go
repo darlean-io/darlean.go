@@ -41,7 +41,7 @@ func TestActorContainer(t *testing.T) {
 
 	time.Sleep(SLEEP_BASIS * 5)
 
-	container.Stop()
+	go container.Stop()
 
 	time.Sleep(SLEEP_BASIS_HALF)
 

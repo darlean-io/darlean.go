@@ -65,9 +65,10 @@ type Api struct {
 	transport     *natstransport.NatsTransport
 	staticInvoker *transporthandler.TransportHandler
 	fetcher       *remoteactorregistry.RemoteActorRegistryFetcher
-	actors        map[normalized.ActorType]ActorInfo
+	actorTypes    map[normalized.ActorType]ActorInfo
 	pusher        *remoteactorregistry.RemoteActorRegistryPusher
 	dispatcher    *inward.Dispatcher
+	containers    []*inward.StandardActorContainer
 }
 
 func NewApi(appId string, natsAddr string, hosts []string) *Api {
@@ -93,7 +94,8 @@ func NewApi(appId string, natsAddr string, hosts []string) *Api {
 		fetcher:       fetcher,
 		pusher:        registryPusher,
 		dispatcher:    dispatcher,
-		actors:        map[normalized.ActorType]ActorInfo{},
+		actorTypes:    map[normalized.ActorType]ActorInfo{},
+		containers:    []*inward.StandardActorContainer{},
 	}
 }
 
@@ -101,13 +103,16 @@ func (api *Api) Start() {
 	api.registerActors()
 	api.staticInvoker.Start(api.dispatcher)
 	api.fetcher.Start()
-	if len(api.actors) > 0 {
+	if len(api.actorTypes) > 0 {
 		api.pusher.Start()
 	}
 }
 
 func (api *Api) Stop() {
-	if len(api.actors) > 0 {
+	if len(api.actorTypes) > 0 {
+		for idx := len(api.containers) - 1; idx >= 0; idx-- {
+			api.containers[idx].Stop()
+		}
 		api.pusher.Stop()
 	}
 	api.registry.Stop()
@@ -121,7 +126,7 @@ func (api *Api) Invoke(request *invoker.Request, goCb invokeCb) {
 
 func (api *Api) RegisterActor(options RegisterActorOptions) {
 	normalizedActorType := normalized.NormalizeActorType(options.ActorType)
-	api.actors[normalizedActorType] = ActorInfo{
+	api.actorTypes[normalizedActorType] = ActorInfo{
 		ActorType:   normalizedActorType,
 		Actions:     map[normalized.ActionName]ActionInfo{},
 		CallManager: api,
@@ -130,7 +135,7 @@ func (api *Api) RegisterActor(options RegisterActorOptions) {
 
 func (api *Api) RegisterAction(options RegisterActionOptions, callback actionCb) {
 	normalizedActorType := normalized.NormalizeActorType(options.ActorType)
-	actor, has := api.actors[normalizedActorType]
+	actor, has := api.actorTypes[normalizedActorType]
 	if !has {
 		panic("Actor not known")
 	}
@@ -167,11 +172,11 @@ func (api *Api) HandleResponse(callHandle Handle, options SubmitActionResultOpti
 }
 
 func (api *Api) registerActors() {
-	if len(api.actors) == 0 {
+	if len(api.actorTypes) == 0 {
 		return
 	}
 
-	for _, actor2 := range api.actors {
+	for _, actor2 := range api.actorTypes {
 		actor := actor2 // Make a scoped copy so that coroutines have the proper actor
 		actionDefs := map[normalized.ActionName]inward.ActionDef{}
 		for _, action := range actor.Actions {
@@ -181,9 +186,18 @@ func (api *Api) registerActors() {
 		}
 
 		// TODO: fix RequiresLock
-		container := inward.NewStandardActorContainer(actor.ActorType, false, actionDefs, func(id []string) inward.InstanceWrapper {
-			return NewActorStub(&actor, id)
-		}, nil)
+		container := inward.NewStandardActorContainer(actor.ActorType, false, actionDefs,
+			// Wrapper factory:
+			func(id []string) inward.InstanceWrapper {
+
+				stub := NewActorStub(&actor, id)
+				return stub
+			},
+			// Container finished handler:
+			func() {
+
+			})
+		api.containers = append(api.containers, container)
 
 		api.dispatcher.RegisterActorType(inward.ActorInfo{
 			ActorType: actor.ActorType,

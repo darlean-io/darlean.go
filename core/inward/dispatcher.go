@@ -1,6 +1,7 @@
 package inward
 
 import (
+	"github.com/darlean-io/darlean.go/core/internal/frameworkerror"
 	"github.com/darlean-io/darlean.go/core/normalized"
 	"github.com/darlean-io/darlean.go/core/wire"
 
@@ -42,7 +43,7 @@ func (dispatcher Dispatcher) Dispatch(call *wire.ActorCallRequestIn, onFinished 
 func (dispatcher Dispatcher) doDispatch(call *wire.ActorCallRequestIn, onFinished FinishedHandler) {
 	actorType := call.ActorType
 	if actorType == "" {
-		onFinished(nil, actionerror.NewFrameworkError(actionerror.Options{
+		onFinished(nil, frameworkerror.New(actionerror.Options{
 			Code:     "NO_ACTOR_TYPE",
 			Template: "Actor type not specified in actor call request",
 		}))
@@ -52,7 +53,7 @@ func (dispatcher Dispatcher) doDispatch(call *wire.ActorCallRequestIn, onFinishe
 	normalizedActorType := normalized.NormalizeActorType(actorType)
 	info, has := dispatcher.actorTypes[normalizedActorType]
 	if !has {
-		onFinished(nil, actionerror.NewFrameworkError(actionerror.Options{
+		onFinished(nil, frameworkerror.New(actionerror.Options{
 			Code:     "ACTOR_TYPE_NOT_REGISTERED",
 			Template: "Actor type [ActorType] is not registered",
 			Parameters: map[string]any{

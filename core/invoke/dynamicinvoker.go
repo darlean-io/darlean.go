@@ -8,6 +8,7 @@ import (
 	"github.com/darlean-io/darlean.go/base/invoker"
 
 	"github.com/darlean-io/darlean.go/core/backoff"
+	"github.com/darlean-io/darlean.go/core/internal/frameworkerror"
 
 	"github.com/darlean-io/darlean.go/utils/variant"
 
@@ -107,7 +108,7 @@ func (invoker *DynamicInvoker) Invoke(request *invoker.Request) (variant.Assigna
 				var err2 actionerror.Error
 				assignError := response.Error.AssignTo(&err2)
 				if assignError != nil {
-					causes = append(causes, actionerror.NewFrameworkError(actionerror.Options{
+					causes = append(causes, frameworkerror.New(actionerror.Options{
 						Code:     "ERROR_PARSE_ERROR",
 						Template: "Action returned an error, but unable to parse the error",
 					}))
@@ -136,7 +137,7 @@ func (invoker *DynamicInvoker) Invoke(request *invoker.Request) (variant.Assigna
 			}
 			return response.Value, nil
 		} else {
-			causes = append(causes, actionerror.NewFrameworkError(actionerror.Options{
+			causes = append(causes, frameworkerror.New(actionerror.Options{
 				Code:     FRAMEWORK_ERROR_NO_RECEIVERS_AVAILABLE,
 				Template: "No receivers available at [RequestTime] to process an action on an instance of [ActorType]",
 				Parameters: map[string]any{
@@ -164,7 +165,7 @@ func (invoker *DynamicInvoker) Invoke(request *invoker.Request) (variant.Assigna
 		cause = causes[0].Message
 	}
 
-	return nil, actionerror.NewFrameworkError(actionerror.Options{
+	return nil, frameworkerror.New(actionerror.Options{
 		Code:     FRAMEWORK_ERROR_INVOKE_ERROR,
 		Template: "Failed to invoke remote method [ActionName] on an instance of [ActorType]: [FirstMessage]",
 		Parameters: map[string]any{
