@@ -113,19 +113,15 @@ func main() {
 		panic(err)
 	}
 
-	var disp *inward.Dispatcher
-
-	transportHandler := transporthandler.New(transport, func() transporthandler.InwardCallDispatcher {
-		return disp
-	}, OUR_APP_ID)
+	transportHandler := transporthandler.New(transport, OUR_APP_ID)
 	registryFetcher := remoteactorregistry.NewFetcher(HOSTS, transportHandler)
 	registryPusher := remoteactorregistry.NewPusher(HOSTS, OUR_APP_ID, transportHandler)
-	disp = inward.NewDispatcher(registryPusher)
+	disp := inward.NewDispatcher(registryPusher)
 
 	backoff := backoff.Exponential(1*time.Millisecond, 6, 4.0, 0.25)
 	invoker := invoke.NewDynamicInvoker(transportHandler, backoff, registryFetcher)
 
-	transportHandler.Start()
+	transportHandler.Start(disp)
 	registryPusher.Start()
 	registryFetcher.Start()
 

@@ -7,6 +7,7 @@ import (
 	"github.com/darlean-io/darlean.go/base/invoker"
 	"github.com/darlean-io/darlean.go/core"
 	"github.com/darlean-io/darlean.go/core/invoke"
+	"github.com/darlean-io/darlean.go/core/inward"
 	"github.com/darlean-io/darlean.go/core/wire"
 
 	"github.com/google/uuid"
@@ -90,18 +91,18 @@ func (handler *TransportHandler) handleReturnMessage(tags *wire.TagsIn) {
 	}
 }
 
-func New(transport core.Transport, dispatcherFactory func() InwardCallDispatcher, appId string) *TransportHandler {
+func New(transport core.Transport, appId string) *TransportHandler {
 	invoker := TransportHandler{
-		appId:             appId,
-		transport:         transport,
-		dispatcherFactory: dispatcherFactory,
-		pendingCalls:      make(map[string]pendingCall),
+		appId:        appId,
+		transport:    transport,
+		pendingCalls: make(map[string]pendingCall),
 	}
 
 	return &invoker
 }
 
-func (handler *TransportHandler) Start() {
+func (handler *TransportHandler) Start(dispatcher *inward.Dispatcher) {
+	handler.dispatcher = dispatcher
 	go handler.Listen()
 }
 

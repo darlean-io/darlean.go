@@ -238,6 +238,10 @@ func (runner *DefaultInstanceRunner) loop(activationErrorHandler FinishedHandler
 					err = fmt.Errorf("instancerunner: invoke: panic: %v", r)
 				}
 				var actionError *actionerror.Error
+				// Note: When you see stringe things here, like errors that err is nil even though you
+				// are inside the if block, it may be because the underlying nil is a "typed nil"
+				// (like (MyError)(nil)) instead of a plain nil ((any)(nil)).
+				// See https://codefibershq.com/blog/golang-why-nil-is-not-always-nil.
 				if err != nil {
 					asActionError, has := err.(actionerror.Error)
 					if has {

@@ -1,1 +1,1 @@
-go -C embedlib build -v -o embedlib.dll -buildmode=c-shared api.go embedlib.go
+go -C embedlib build -v -o embedlib.dll -buildmode=c-shared types.go actorstub.go api.go embedlib.go
