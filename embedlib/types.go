@@ -9,7 +9,6 @@ type RegisterActorResult struct {
 }
 
 type RegisterActionOptions struct {
-	ActorType  string
 	ActionName string
 	Locking    string
 }
@@ -28,7 +27,6 @@ const SPECIAL_ACTION_DEACTIVATE = SpecialActionName("deactivate")
 const SPECIAL_ACTION_RELEASE = SpecialActionName("release")
 
 type PerformActionOptions struct {
-	ActorType         string
 	ActorId           []string
 	ActionName        string
 	SpecialActionName SpecialActionName

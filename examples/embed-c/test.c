@@ -29,7 +29,7 @@ char* cstr(GoString s) {
 handle app = 0;
 
 // Handler when a remote invoke operation is done
-void onInvoked(handle app, handle call, GoString response) {
+void onInvoked(handle call, GoString response) {
     char *resp = cstr(response);
 
     printf("[%i] Invoked: %s\n", call, resp);
@@ -37,13 +37,13 @@ void onInvoked(handle app, handle call, GoString response) {
 
 // Handle an incoming action. We should forward the call to one of our internal actors/actions/methods and
 // when finished, invoke the SubmitActionResult.
-void handleAction(handle app, handle call, GoString request) {
+void handleAction(handle action, handle call, GoString request) {
     char *req = cstr(request);
     
     printf("[%i] We should be handling action: %s. For now, return a dummy Bar result\n", call, req);
 
     GoString* result = gostr("{\"Value\": \"Bar\"}");
-    SubmitActionResult(app, call, *result);
+    SubmitActionResult(call, *result);
 }
 
 int main(void) {
@@ -54,9 +54,9 @@ int main(void) {
     // Register our local actor.
     // Note: This functionality is not yet implemented in the go api wrapper.
     GoString* ourActorRegistration = gostr("{\"actorType\": \"ouractor\"}");
-    GoString* ourActionRegistation = gostr("{\"actorType\": \"ouractor\", \"actionName\": \"echo\", \"locking\": \"exclusive\"}");
-    RegisterActor(app, *ourActorRegistration);
-    RegisterAction(app, *ourActionRegistation, handleAction);
+    GoString* ourActionRegistation = gostr("{\"actionName\": \"echo\", \"locking\": \"exclusive\"}");
+    handle actor = RegisterActor(app, *ourActorRegistration);
+    handle action = RegisterAction(actor, *ourActionRegistation, handleAction);
 
     // Start the app.
     StartApp(app);

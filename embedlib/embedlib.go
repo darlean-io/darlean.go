@@ -6,11 +6,11 @@ package main
 //
 // typedef uint64_t handle;
 //
-// typedef void (*invoke_cb)(handle, handle, _GoString_);
-// void makeInvokeCallback(handle app, handle call, _GoString_ response, invoke_cb cb);
+// typedef void (*invoke_cb)(handle, _GoString_);
+// void makeInvokeCallback(handle call, _GoString_ response, invoke_cb cb);
 //
 // typedef void (*action_cb)(handle, handle, _GoString_);
-// void callActionCallback(handle app, handle call, _GoString_ request, action_cb cb);
+// void callActionCallback(handle action, handle call, _GoString_ request, action_cb cb);
 import "C"
 import (
 	"runtime/cgo"
@@ -85,7 +85,7 @@ func Invoke(app Handle, call Handle, cb C.invoke_cb, options string) {
 			}
 		}
 
-		C.makeInvokeCallback(C.handle(app), C.handle(call), string(bytes), cb)
+		C.makeInvokeCallback(C.handle(call), string(bytes), cb)
 	}
 
 	var opts InvokeActionOptions
@@ -102,21 +102,27 @@ func Invoke(app Handle, call Handle, cb C.invoke_cb, options string) {
 }
 
 //export RegisterActor
-func RegisterActor(app Handle, info string) {
+func RegisterActor(app Handle, info string) Handle {
 	api := getApi(app)
 	var options RegisterActorOptions
 	json.Unmarshal([]byte(info), &options)
-	api.RegisterActor(options)
+	actor := api.RegisterActor(options)
+	handle := cgo.NewHandle(actor)
+	return Handle(handle)
 }
 
 //export RegisterAction
-func RegisterAction(app Handle, info string, cb C.action_cb) {
-	api := getApi(app)
+func RegisterAction(actor Handle, info string, cb C.action_cb) Handle {
+	h := cgo.Handle(actor)
+	a := h.Value().(RegisteredActor)
+
 	var options RegisterActionOptions
 	json.Unmarshal([]byte(info), &options)
-	goCb := func(call Handle, arguments []variant.Assignable) {
+	var actionHandle Handle
+
+	// The c-callback that is called when someone within Darlean wants to invoke the action
+	goCb := func(call PendingCall, arguments []variant.Assignable) {
 		invokeOps := PerformActionOptions{
-			ActorType: options.ActorType,
 			// TODDO: ActorId,
 			ActionName: options.ActionName,
 			Arguments:  []any{},
@@ -130,25 +136,31 @@ func RegisterAction(app Handle, info string, cb C.action_cb) {
 		if err != nil {
 			panic("Fatal json error")
 		}
-
-		C.callActionCallback(C.handle(app), C.handle(call), string(bytes), cb)
+		callHandle := cgo.NewHandle(call)
+		C.callActionCallback(C.handle(actionHandle), C.handle(callHandle), string(bytes), cb)
 	}
-	api.RegisterAction(options, goCb)
+
+	action := a.RegisterAction(options, goCb)
+	actionHandle = Handle(cgo.NewHandle((action)))
+	return Handle(actionHandle)
 }
 
 //export SubmitActionResult
-func SubmitActionResult(app Handle, call Handle, result string) {
-	api := getApi(app)
-
+func SubmitActionResult(call Handle, result string) {
 	var res SubmitActionResultOptions
 	err := json.Unmarshal([]byte(result), &res)
 	if err != nil {
 		panic("Invalid json")
 	}
+	handle := cgo.Handle(call)
+	c := handle.Value().(PendingCall)
 
 	// Handle the response in a goroutine to avoid blocking when we are invoked
 	// in the same thread that triggered the action.
-	go api.HandleResponse(call, res)
+	go func() {
+		c.HandleResponse(res)
+		handle.Delete()
+	}()
 }
 
 func fillActionError(source *actionerror.Error) *ActionError {

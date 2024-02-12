@@ -8,19 +8,18 @@ package main
 //
 // typedef uint64_t handle;
 //
-// typedef void (*invoke_cb)(handle, handle, _GoString_);
-// extern void makeInvokeCallback(handle app, handle call, _GoString_ response, invoke_cb cb) {
-//     cb(app, call, response);
+// typedef void (*invoke_cb)(handle, _GoString_);
+// extern void makeInvokeCallback(handle call, _GoString_ response, invoke_cb cb) {
+//     cb(call, response);
 // }
 //
 // typedef void (*action_cb)(handle, handle, _GoString_);
-// extern void callActionCallback(handle app, handle call, _GoString_ request, action_cb cb) {
-//     cb(app, call, request);
+// extern void callActionCallback(handle action, handle call, _GoString_ request, action_cb cb) {
+//     cb(action, call, request);
 //}
 import "C"
 
 import (
-	"runtime/cgo"
 	"time"
 
 	"github.com/darlean-io/darlean.go/base/actionerror"
@@ -37,7 +36,7 @@ import (
 )
 
 type invokeCb func(value variant.Assignable, error *actionerror.Error)
-type actionCb func(callId Handle, arguments []variant.Assignable)
+type actionCb func(call PendingCall, arguments []variant.Assignable)
 
 type ActionInfo struct {
 	ActionName normalized.ActionName
@@ -55,7 +54,7 @@ type CallManager interface {
 	MakeActionCall(info *ActionInfo, resultChannel chan SubmitActionResultOptions, arguments []variant.Assignable)
 }
 
-type PendingCall struct {
+type CallInfo struct {
 	resultChannel chan SubmitActionResultOptions
 }
 
@@ -69,6 +68,17 @@ type Api struct {
 	pusher        *remoteactorregistry.RemoteActorRegistryPusher
 	dispatcher    *inward.Dispatcher
 	containers    []*inward.StandardActorContainer
+}
+
+type RegisteredActor interface {
+	RegisterAction(options RegisterActionOptions, callback actionCb) RegisteredAction
+}
+
+type RegisteredAction interface {
+}
+
+type PendingCall interface {
+	HandleResponse(options SubmitActionResultOptions)
 }
 
 func NewApi(appId string, natsAddr string, hosts []string) *Api {
@@ -124,21 +134,7 @@ func (api *Api) Invoke(request *invoker.Request, goCb invokeCb) {
 	goCb(result, err)
 }
 
-func (api *Api) RegisterActor(options RegisterActorOptions) {
-	normalizedActorType := normalized.NormalizeActorType(options.ActorType)
-	api.actorTypes[normalizedActorType] = ActorInfo{
-		ActorType:   normalizedActorType,
-		Actions:     map[normalized.ActionName]ActionInfo{},
-		CallManager: api,
-	}
-}
-
-func (api *Api) RegisterAction(options RegisterActionOptions, callback actionCb) {
-	normalizedActorType := normalized.NormalizeActorType(options.ActorType)
-	actor, has := api.actorTypes[normalizedActorType]
-	if !has {
-		panic("Actor not known")
-	}
+func (actor *ActorInfo) RegisterAction(options RegisterActionOptions, callback actionCb) RegisteredAction {
 	normalizedActionName := normalized.NormalizeActionName(options.ActionName)
 	var actionLocking inward.ActionLockKind
 	if options.Locking == "shared" {
@@ -149,26 +145,36 @@ func (api *Api) RegisterAction(options RegisterActionOptions, callback actionCb)
 		actionLocking = inward.ACTION_LOCK_EXCLUSIVE
 	}
 
-	actor.Actions[normalizedActionName] = ActionInfo{
+	action := ActionInfo{
 		ActionName: normalizedActionName,
 		Locking:    actionLocking,
 		Callback:   callback,
 	}
+	actor.Actions[normalizedActionName] = action
+	return &action
+}
+
+func (api *Api) RegisterActor(options RegisterActorOptions) RegisteredActor {
+	normalizedActorType := normalized.NormalizeActorType(options.ActorType)
+	info := ActorInfo{
+		ActorType:   normalizedActorType,
+		Actions:     map[normalized.ActionName]ActionInfo{},
+		CallManager: api,
+	}
+
+	api.actorTypes[normalizedActorType] = info
+	return &info
 }
 
 func (api *Api) MakeActionCall(info *ActionInfo, resultChannel chan SubmitActionResultOptions, arguments []variant.Assignable) {
-	call := PendingCall{
+	call := CallInfo{
 		resultChannel: resultChannel,
 	}
-	handle := cgo.NewHandle(call)
-	info.Callback(Handle(handle), arguments)
+	info.Callback(&call, arguments)
 }
 
-func (api *Api) HandleResponse(callHandle Handle, options SubmitActionResultOptions) {
-	handle := cgo.Handle(callHandle)
-	call := handle.Value().(PendingCall)
+func (call *CallInfo) HandleResponse(options SubmitActionResultOptions) {
 	call.resultChannel <- options
-	handle.Delete()
 }
 
 func (api *Api) registerActors() {
